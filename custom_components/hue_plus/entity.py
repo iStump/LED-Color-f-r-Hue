@@ -48,8 +48,7 @@ class HuePlusEntity(Entity):
     def link_to_hue_device(self, hass: HomeAssistant, hue_id: str | None) -> bool:
         """Entität beim passenden Gerät der OFFIZIELLEN Hue-Integration anzeigen.
 
-        Z. B. «Einschaltverhalten» direkt bei der Lampe, «Empfindlichkeit» beim
-        Bewegungsmelder. Es wird kein neues Gerät angelegt. Gibt es das Gerät
+        Z. B. «Einschaltverhalten» direkt bei der Lampe. Es wird kein neues Gerät angelegt. Gibt es das Gerät
         (noch) nicht, bleibt die Entität beim Sammel-Gerät «LED Color».
         """
         if not hue_id:

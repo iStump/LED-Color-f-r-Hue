@@ -160,7 +160,7 @@ class HueClient:
     async def async_update_resource(
         self, rtype: str, rid: str, payload: dict[str, Any]
     ) -> None:
-        """Eine Ressource ändern (z. B. Farbverlauf, Empfindlichkeit)."""
+        """Eine Ressource ändern (z. B. Farbverlauf, Einschaltverhalten)."""
         _LOGGER.debug("PUT %s/%s %s", rtype, rid, payload)
         await self.request("put", f"resource/{rtype}/{rid}", payload)
 

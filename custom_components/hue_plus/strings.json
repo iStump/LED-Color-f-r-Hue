@@ -34,14 +34,6 @@
         "name": "Gradient"
       }
     },
-    "number": {
-      "empfindlichkeit": {
-        "name": "Sensitivity"
-      },
-      "motionaware_empfindlichkeit": {
-        "name": "MotionAware sensitivity"
-      }
-    },
     "select": {
       "einschaltverhalten": {
         "name": "Power-on behavior",

@@ -29,7 +29,7 @@ from .websocket import async_setup_websocket
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SELECT, Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SELECT, Platform.SENSOR]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -66,6 +66,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HuePlusConfigEntry) -> b
 
     client.connected = True
     entry.runtime_data = client
+    _remove_retired_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _remove_empty_hub_device(hass, entry)
     await async_register_panel(hass, await _version(hass))
@@ -82,6 +83,14 @@ async def _version(hass: HomeAssistant) -> str:
     """Versionsnummer aus manifest.json (für das Neuladen der Seite nach Updates)."""
     integration = await async_get_integration(hass, DOMAIN)
     return str(integration.version or "0")
+
+
+def _remove_retired_entities(hass: HomeAssistant, entry: HuePlusConfigEntry) -> None:
+    """Empfindlichkeits-Regler (bis 0.4.0) entfernen – die Hue App kann das selbst."""
+    ent_reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if ent.domain == "number" and ent.unique_id.endswith("_empfindlichkeit"):
+            ent_reg.async_remove(ent.entity_id)
 
 
 def _remove_empty_hub_device(hass: HomeAssistant, entry: HuePlusConfigEntry) -> None:

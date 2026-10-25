@@ -34,14 +34,6 @@
         "name": "Verlauf"
       }
     },
-    "number": {
-      "empfindlichkeit": {
-        "name": "Empfindlichkeit"
-      },
-      "motionaware_empfindlichkeit": {
-        "name": "MotionAware Empfindlichkeit"
-      }
-    },
     "select": {
       "einschaltverhalten": {
         "name": "Einschaltverhalten",

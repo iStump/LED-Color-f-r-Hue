@@ -5,13 +5,13 @@
  *   Verläufe      – Lampe wählen, Farbpunkte antippen/ziehen, Farbe und Helligkeit wählen
  *   Szenen        – alle Hue-Szenen mit ihren echten Farben, antippen = einschalten
  *   Favoriten     – gespeicherte Verläufe auf beliebige Lampen übertragen
- *   Einstellungen – Einschaltverhalten und Empfindlichkeit aller Geräte, nach Raum
+ *   Einstellungen – Einschaltverhalten aller Lampen, nach Raum
  *
  * Kein Internet nötig, keine fremden Bibliotheken. Daten kommen live aus Home Assistant
  * (Sensoren sensor.hue_plus_…_verlauf und die Befehle hue_plus/…).
  */
 
-const VERSION = "0.4.0";
+const VERSION = "0.4.1";
 
 const MODES = {
   interpolated_palette: "Fliessend",
@@ -72,9 +72,9 @@ const EN = {
   "Auf welche Lampen?": "Which lights?", "Löschen": "Delete", "Anwenden": "Apply",
   "Gelöscht: {name}": "Deleted: {name}", "«{name}» angewendet.": "«{name}» applied.",
   "Keine Einstellungen gefunden.": "No settings found.", "Ohne Raum": "No area",
-  "Einschaltverhalten": "Power-on behavior", "Empfindlichkeit": "Sensitivity", "MotionAware Empfindlichkeit": "MotionAware sensitivity",
-  "Einschaltverhalten: was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter. Empfindlichkeit: wie leicht Bewegungsmelder und MotionAware auslösen.":
-    "Power-on behavior: what a light does when power returns, for example after the wall switch. Sensitivity: how easily motion sensors and MotionAware trigger.",
+  "Einschaltverhalten": "Power-on behavior",
+  "Was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter oder einem Stromausfall.":
+    "What a light does when power returns, for example after the wall switch or a power cut.",
   "Kerze": "Candle", "Kaminfeuer": "Fireplace", "Prisma": "Prism", "Opal": "Opal", "Glitzern": "Glisten",
   "Unterwasser": "Underwater", "Kosmos": "Cosmos", "Sonnenstrahl": "Sunbeam", "Zauber": "Enchant",
   "Sonnenaufgang": "Sunrise", "Sonnenuntergang": "Sunset",
@@ -294,9 +294,6 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
 @container (max-width: 640px) { .row { grid-template-columns: 1fr; gap: 8px; } }
 .row .name { font-size: 15px; }
 .row .name small { display: block; color: var(--text-3); font-size: 12px; }
-.row .sens { display: flex; align-items: center; gap: 12px; }
-.row .sens .slider { flex: 1; height: 36px; }
-.row .sens output { width: 42px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-2); }
 
 /* ---------- Blatt (unten einfahrend) & Hinweis */
 .sheet-back { display: none; position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -361,7 +358,6 @@ class LedColorPanel extends HTMLElement {
     this._scenes = [];
     this._room = null;
     this._favs = [];
-    this._busySliders = new Set();
     this._hist = [];
     this._lastSnap = 0;
     this._dauer = store.get("dauer", 10);
@@ -1164,9 +1160,8 @@ class LedColorPanel extends HTMLElement {
   _renderSettings() {
     const h = this._hass, box = this.shadowRoot.querySelector(".settings");
     const ents = Object.values(h.entities || {}).filter((e) => e.platform === "hue_plus" && h.states[e.entity_id]);
-    const rows = ents.filter((e) => e.entity_id.startsWith("select.") || e.entity_id.startsWith("number."));
+    const rows = ents.filter((e) => e.entity_id.startsWith("select."));
     if (!rows.length) { box.innerHTML = `<div class="empty" style="margin-top:14px">${tr("Keine Einstellungen gefunden.")}</div>`; return; }
-    if (this._busySliders.size) return; // nicht neu zeichnen, während ein Regler gezogen wird
     const byRoom = {};
     rows.forEach((e) => (byRoom[this._areaName(e.entity_id)] = byRoom[this._areaName(e.entity_id)] || []).push(e));
     const sig = JSON.stringify(rows.map((e) => [e.entity_id, h.states[e.entity_id].state, this._areaName(e.entity_id)]));
@@ -1175,27 +1170,18 @@ class LedColorPanel extends HTMLElement {
     const label = (e) => {
       const dev = this._deviceName(e.entity_id);
       const fn = String(h.states[e.entity_id].attributes.friendly_name || e.entity_id);
-      return dev || fn.replace(/ (Einschaltverhalten|Empfindlichkeit|Power-on behavior|Sensitivity)$/, "");
+      return dev || fn.replace(/ (Einschaltverhalten|Power-on behavior)$/, "");
     };
     const none = tr("Ohne Raum");
     const rooms = Object.keys(byRoom).sort((a, b) => (a === none) - (b === none) || a.localeCompare(b, "de"));
-    box.innerHTML = `<p class="muted" style="margin:6px 0 18px;font-size:14px;max-width:60ch">${tr("Einschaltverhalten: was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter. Empfindlichkeit: wie leicht Bewegungsmelder und MotionAware auslösen.")}</p>` +
+    box.innerHTML = `<p class="muted" style="margin:6px 0 18px;font-size:14px;max-width:60ch">${tr("Was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter oder einem Stromausfall.")}</p>` +
       rooms.map((room) => `<div class="room"><h2>${esc(room)}</h2>${byRoom[room]
         .sort((a, b) => label(a).localeCompare(label(b), "de") || a.entity_id.localeCompare(b.entity_id))
         .map((e) => {
           const st = h.states[e.entity_id];
-          if (e.entity_id.startsWith("select.")) {
-            return `<div class="row"><div class="name">${esc(label(e))}<small>${tr("Einschaltverhalten")}</small></div>
+          return `<div class="row"><div class="name">${esc(label(e))}<small>${tr("Einschaltverhalten")}</small></div>
               <div class="segs" data-e="${esc(e.entity_id)}">${POWERUP.map(([v, txt]) => `<button data-v="${v}" aria-pressed="${st.state === v}">${tr(txt)}</button>`).join("")}
               ${st.state === "custom" ? `<button disabled aria-pressed="true">${tr("Eigene (Hue App)")}</button>` : ""}</div></div>`;
-          }
-          const min = Number(st.attributes.min ?? 0), max = Number(st.attributes.max ?? 4), val = Number(st.state);
-          const pct = isFinite(val) ? ((val - min) / (max - min || 1)) * 100 : 0;
-          const what = tr(e.translation_key === "motionaware_empfindlichkeit" ? "MotionAware Empfindlichkeit" : "Empfindlichkeit");
-          return `<div class="row"><div class="name">${esc(label(e))}<small>${what}</small></div>
-            <div class="sens" data-e="${esc(e.entity_id)}" data-min="${min}" data-max="${max}">
-              <div class="slider"><div class="fill" style="width:${pct}%;background:var(--accent)"></div><div class="grip" style="left:${pct}%"></div></div>
-              <output>${isFinite(val) ? `${val} / ${max}` : "–"}</output></div></div>`;
         }).join("")}</div>`).join("");
 
     box.querySelectorAll(".segs[data-e] button[data-v]").forEach((b) => b.addEventListener("click", () => {
@@ -1203,22 +1189,6 @@ class LedColorPanel extends HTMLElement {
       b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       this._call("select", "select_option", { entity_id: ent, option: b.dataset.v });
     }));
-    box.querySelectorAll(".sens").forEach((wrap) => {
-      const ent = wrap.dataset.e, min = Number(wrap.dataset.min), max = Number(wrap.dataset.max);
-      const sl = wrap.querySelector(".slider"), out = wrap.querySelector("output");
-      let value = null;
-      this._bindSlider(sl, (pct) => {
-        this._busySliders.add(ent);
-        value = Math.round(min + (pct / 100) * (max - min));
-        const p = ((value - min) / (max - min || 1)) * 100;
-        sl.querySelector(".fill").style.width = `${p}%`;
-        sl.querySelector(".grip").style.left = `${p}%`;
-        out.textContent = `${value} / ${max}`;
-      }, () => {
-        this._busySliders.delete(ent);
-        if (value !== null) this._call("number", "set_value", { entity_id: ent, value });
-      });
-    });
   }
 }
 

@@ -26,7 +26,7 @@ neu starten → Seite einmal neu laden. Nichts löschen, nichts neu einrichten.
   Nochmals antippen oder «Effekt aus» beendet den Effekt.
 - **Szenen:** alle Hue-Szenen mit echten Farben. Antippen = einschalten, kleines Symbol = dynamisch.
 - **Favoriten:** gespeicherte Verläufe (in Home Assistant, auf allen Geräten gleich) auf Lampen legen.
-- **Einstellungen:** Einschaltverhalten und Empfindlichkeit aller Geräte nach Raum.
+- **Einstellungen:** Einschaltverhalten aller Lampen nach Raum.
 
 Die Seite ist deutsch; ist Home Assistant auf einer anderen Sprache eingestellt, erscheint sie englisch.
 
