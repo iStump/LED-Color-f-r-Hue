@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up LED Color for Hue",
+        "description": "Address (IP) of your Hue Bridge. If the official Hue integration is installed it is already filled in.",
+        "data": {
+          "host": "Bridge address"
+        },
+        "data_description": {
+          "host": "e.g. 192.168.1.20"
+        }
+      },
+      "link": {
+        "title": "Press the bridge button",
+        "description": "Press the round button on top of the Hue Bridge ({host}) now, then click «Submit» within 30 seconds."
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot reach the bridge. Check the address and that the bridge is powered.",
+      "link_button": "The button has not been pressed (yet). Press it and submit again.",
+      "not_hue_bridge": "No Hue Bridge answers at this address.",
+      "bridge_v1": "This is an old round bridge (V1). LED Color needs the square bridge (V2) or the Bridge Pro.",
+      "unknown": "Unexpected error – see the log."
+    },
+    "abort": {
+      "already_configured": "This bridge is already set up in LED Color.",
+      "reauth_successful": "Re-linked – LED Color is running again."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "verlauf": {
+        "name": "Gradient"
+      }
+    },
+    "number": {
+      "empfindlichkeit": {
+        "name": "Sensitivity"
+      },
+      "motionaware_empfindlichkeit": {
+        "name": "MotionAware sensitivity"
+      }
+    },
+    "select": {
+      "einschaltverhalten": {
+        "name": "Power-on behavior",
+        "state": {
+          "safety": "Hue default (bright warm white)",
+          "powerfail": "As before the power loss",
+          "last_on_state": "On with last color",
+          "custom": "Custom (Hue app)"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "bridge_error": {
+      "message": "The Hue Bridge reported an error: {error}"
+    },
+    "invalid_color": {
+      "message": "Unknown color ({error}). Allowed: \"#2f63ff\", \"2f63ff\", \"red\" or [47, 99, 255]."
+    },
+    "no_colors": {
+      "message": "Please give at least one color."
+    },
+    "not_gradient": {
+      "message": "{name} cannot show a gradient. Give a single color."
+    },
+    "too_many_colors": {
+      "message": "{name} supports at most {max} gradient colors, you gave {count}."
+    },
+    "mode_not_supported": {
+      "message": "{name} does not support mode «{mode}». Possible: {allowed}."
+    },
+    "no_target": {
+      "message": "Please choose a Hue light (light.…) or a gradient sensor (sensor.…_verlauf) as target."
+    },
+    "unknown_target": {
+      "message": "{entity_id} is neither a Hue light nor a LED Color gradient sensor."
+    },
+    "powerup_custom": {
+      "message": "«Custom» can only be configured in the Hue app."
+    }
+  },
+  "selector": {
+    "modus": {
+      "options": {
+        "interpolated_palette": "Smooth (interpolated_palette)",
+        "interpolated_palette_mirrored": "Smooth, mirrored (interpolated_palette_mirrored)",
+        "random_pixelated": "Random pixels (random_pixelated)",
+        "segmented_palette": "Segments (segmented_palette)"
+      }
+    }
+  },
+  "services": {
+    "set_gradient": {
+      "name": "Set gradient",
+      "description": "Sets a color gradient on a Hue gradient light (Signe, Lightstrip Gradient, Play Gradient) and turns it on.",
+      "fields": {
+        "farben": {
+          "name": "Colors",
+          "description": "Colors in order, e.g. #2f63ff, #16b8f0, #ff8a00. At least 2 for a gradient (at most what the light supports, usually 5). A single color = whole light one color."
+        },
+        "modus": {
+          "name": "Mode",
+          "description": "How the colors are spread. Empty = smooth."
+        },
+        "helligkeit": {
+          "name": "Brightness",
+          "description": "Brightness in percent. Empty = unchanged."
+        },
+        "uebergang": {
+          "name": "Transition",
+          "description": "Duration of the change in seconds. Empty = bridge default."
+        }
+      }
+    },
+    "copy_gradient": {
+      "name": "Copy gradient",
+      "description": "Copies the colors of one Hue light exactly to other lights. Mirrored = reversed order.",
+      "fields": {
+        "von": {
+          "name": "From light",
+          "description": "Light or gradient sensor to copy from."
+        },
+        "gespiegelt": {
+          "name": "Mirrored",
+          "description": "Reverse the color order."
+        },
+        "helligkeit_uebernehmen": {
+          "name": "Copy brightness",
+          "description": "Also copy the brightness."
+        },
+        "uebergang": {
+          "name": "Transition",
+          "description": "Duration in seconds."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "LED Color für Hue einrichten",
+        "description": "Adresse (IP) deiner Hue Bridge. Ist die offizielle Hue-Integration installiert, ist sie schon eingetragen.",
+        "data": {
+          "host": "Adresse der Bridge"
+        },
+        "data_description": {
+          "host": "z. B. 192.168.1.20"
+        }
+      },
+      "link": {
+        "title": "Knopf auf der Bridge drücken",
+        "description": "Drück jetzt den runden Knopf oben auf der Hue Bridge ({host}) und klick danach innerhalb von 30 Sekunden auf «Senden»."
+      }
+    },
+    "error": {
+      "cannot_connect": "Bridge nicht erreichbar. Stimmt die Adresse? Ist die Bridge eingeschaltet?",
+      "link_button": "Der Knopf wurde (noch) nicht gedrückt. Knopf drücken und nochmals «Senden».",
+      "not_hue_bridge": "Unter dieser Adresse antwortet keine Hue Bridge.",
+      "bridge_v1": "Das ist eine alte runde Bridge (V1). LED Color braucht die eckige Bridge (V2) oder die Bridge Pro.",
+      "unknown": "Unerwarteter Fehler – Details im Protokoll."
+    },
+    "abort": {
+      "already_configured": "Diese Bridge ist schon in LED Color eingerichtet.",
+      "reauth_successful": "Neu gekoppelt – LED Color läuft wieder."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "verlauf": {
+        "name": "Verlauf"
+      }
+    },
+    "number": {
+      "empfindlichkeit": {
+        "name": "Empfindlichkeit"
+      },
+      "motionaware_empfindlichkeit": {
+        "name": "MotionAware Empfindlichkeit"
+      }
+    },
+    "select": {
+      "einschaltverhalten": {
+        "name": "Einschaltverhalten",
+        "state": {
+          "safety": "Hue-Standard (hell, warmweiss)",
+          "powerfail": "Wie vor dem Stromausfall",
+          "last_on_state": "An mit letzter Farbe",
+          "custom": "Eigene Einstellung (Hue App)"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "bridge_error": {
+      "message": "Die Hue Bridge meldet einen Fehler: {error}"
+    },
+    "invalid_color": {
+      "message": "Diese Farbe verstehe ich nicht ({error}). Erlaubt: \"#2f63ff\", \"2f63ff\", \"red\" oder [47, 99, 255]."
+    },
+    "no_colors": {
+      "message": "Bitte mindestens eine Farbe angeben."
+    },
+    "not_gradient": {
+      "message": "{name} kann keinen Farbverlauf. Gib nur eine Farbe an."
+    },
+    "too_many_colors": {
+      "message": "{name} kann höchstens {max} Farben im Verlauf, du hast {count} angegeben."
+    },
+    "mode_not_supported": {
+      "message": "{name} kennt den Modus «{mode}» nicht. Möglich: {allowed}."
+    },
+    "no_target": {
+      "message": "Bitte eine Hue-Lampe (light.…) oder einen Verlauf-Sensor (sensor.…_verlauf) als Ziel wählen."
+    },
+    "unknown_target": {
+      "message": "{entity_id} ist keine Hue-Lampe und kein Hue-Plus-Verlauf-Sensor."
+    },
+    "powerup_custom": {
+      "message": "«Eigene Einstellung» kann nur in der Hue App festgelegt werden (dort bei der Lampe unter Einstellungen)."
+    }
+  },
+  "selector": {
+    "modus": {
+      "options": {
+        "interpolated_palette": "Fliessend (interpolated_palette)",
+        "interpolated_palette_mirrored": "Fliessend gespiegelt (interpolated_palette_mirrored)",
+        "random_pixelated": "Zufällig verteilt (random_pixelated)",
+        "segmented_palette": "Abschnitte (segmented_palette)"
+      }
+    }
+  },
+  "services": {
+    "set_gradient": {
+      "name": "Farbverlauf setzen",
+      "description": "Setzt einen Farbverlauf auf einer Hue-Gradient-Lampe (Signe, Lightstrip Gradient, Play Gradient) und schaltet sie ein.",
+      "fields": {
+        "farben": {
+          "name": "Farben",
+          "description": "Farben in Reihenfolge, z. B. #2f63ff, #16b8f0, #ff8a00. Mindestens 2 für einen Verlauf (höchstens so viele, wie die Lampe kann – meist 5). Eine einzige Farbe = ganze Lampe einfarbig."
+        },
+        "modus": {
+          "name": "Modus",
+          "description": "Wie die Farben verteilt werden. Leer lassen = fliessend."
+        },
+        "helligkeit": {
+          "name": "Helligkeit",
+          "description": "Helligkeit in Prozent. Leer lassen = unverändert."
+        },
+        "uebergang": {
+          "name": "Übergang",
+          "description": "Dauer des Wechsels in Sekunden. Leer lassen = Standard der Bridge."
+        }
+      }
+    },
+    "copy_gradient": {
+      "name": "Farbverlauf kopieren",
+      "description": "Überträgt die Farben einer Hue-Lampe exakt auf andere Lampen, z. B. Signe R wie Signe L. Gespiegelt = Reihenfolge umgedreht.",
+      "fields": {
+        "von": {
+          "name": "Von Lampe",
+          "description": "Lampe oder Verlauf-Sensor, deren Farben übernommen werden."
+        },
+        "gespiegelt": {
+          "name": "Gespiegelt",
+          "description": "Farben in umgekehrter Reihenfolge übertragen (z. B. für zwei Signe links und rechts vom Sofa)."
+        },
+        "helligkeit_uebernehmen": {
+          "name": "Helligkeit übernehmen",
+          "description": "Auch die Helligkeit der Quelle übernehmen."
+        },
+        "uebergang": {
+          "name": "Übergang",
+          "description": "Dauer des Wechsels in Sekunden."
+        }
+      }
+    }
+  }
+}

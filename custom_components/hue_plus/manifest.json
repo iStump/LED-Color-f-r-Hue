@@ -1,0 +1,18 @@
+{
+  "domain": "hue_plus",
+  "name": "LED Color für Hue",
+  "after_dependencies": [
+    "hue"
+  ],
+  "codeowners": [
+    "@iStump"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/iStump/LED-Color-f-r-Hue",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/iStump/LED-Color-f-r-Hue/issues",
+  "requirements": [],
+  "version": "0.2.2"
+}

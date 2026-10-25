@@ -1,0 +1,75 @@
+set_gradient:
+  target:
+    entity:
+      - integration: hue_plus
+        domain: sensor
+      - integration: hue
+        domain: light
+  fields:
+    farben:
+      required: true
+      example: '["#2f63ff", "#16b8f0", "#ff8a00"]'
+      selector:
+        text:
+          multiple: true
+    modus:
+      required: false
+      selector:
+        select:
+          translation_key: modus
+          options:
+            - interpolated_palette
+            - interpolated_palette_mirrored
+            - random_pixelated
+            - segmented_palette
+    helligkeit:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+    uebergang:
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 3600
+          step: 0.1
+          unit_of_measurement: s
+
+copy_gradient:
+  target:
+    entity:
+      - integration: hue_plus
+        domain: sensor
+      - integration: hue
+        domain: light
+  fields:
+    von:
+      required: true
+      selector:
+        entity:
+          filter:
+            - integration: hue_plus
+              domain: sensor
+            - integration: hue
+              domain: light
+    gespiegelt:
+      required: false
+      default: false
+      selector:
+        boolean:
+    helligkeit_uebernehmen:
+      required: false
+      default: true
+      selector:
+        boolean:
+    uebergang:
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 3600
+          step: 0.1
+          unit_of_measurement: s

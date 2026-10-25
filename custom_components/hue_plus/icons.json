@@ -1,0 +1,30 @@
+{
+  "entity": {
+    "sensor": {
+      "verlauf": {
+        "default": "mdi:gradient-horizontal"
+      }
+    },
+    "number": {
+      "empfindlichkeit": {
+        "default": "mdi:motion-sensor"
+      },
+      "motionaware_empfindlichkeit": {
+        "default": "mdi:motion-sensor"
+      }
+    },
+    "select": {
+      "einschaltverhalten": {
+        "default": "mdi:power-plug-outline"
+      }
+    }
+  },
+  "services": {
+    "set_gradient": {
+      "service": "mdi:gradient-vertical"
+    },
+    "copy_gradient": {
+      "service": "mdi:content-copy"
+    }
+  }
+}
