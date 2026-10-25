@@ -1,7 +1,8 @@
-"""Befehle für die Seite «LED Color»: Szenen (live), Szene aktivieren, Favoriten."""
+"""Befehle für die Seite «LED Color»: Szenen (live, anlegen, ändern), Favoriten."""
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from typing import TYPE_CHECKING, Any
@@ -15,9 +16,12 @@ from homeassistant.helpers.storage import Store
 from .api import HueError
 from .colors import gamut_of, mirek_to_hex, xy_to_hex
 from .const import DOMAIN, GRADIENT_MODES, MODUS_EINFARBIG
+from .scenes import NAME_MAX, all_groups, build_actions, build_palette, group_light_ids
 
 if TYPE_CHECKING:
     from .api import HueClient
+
+_LOGGER = logging.getLogger(__name__)
 
 STORE_KEY = f"{DOMAIN}.favoriten"
 STORE_VERSION = 1
@@ -85,6 +89,7 @@ def scene_info(client: HueClient, scene: dict[str, Any]) -> dict[str, Any]:
         "id": scene["id"],
         "name": scene.get("metadata", {}).get("name") or "Szene",
         "raum": client.name_of(group) or "Ohne Raum",
+        "raum_id": group.get("id"),
         "raum_typ": group.get("type"),
         "status": (scene.get("status") or {}).get("active", "inactive"),
         "dynamisch_moeglich": bool(palette_colors),
@@ -191,6 +196,132 @@ async def ws_scene_activate(
     connection.send_error(msg["id"], "not_found", "Szene nicht gefunden")
 
 
+@websocket_api.websocket_command({vol.Required("type"): "hue_plus/groups"})
+@callback
+def ws_groups(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict) -> None:
+    """Räume und Zonen mit ihren Lampen und deren Farben von jetzt."""
+    connection.send_result(
+        msg["id"], [group for client in _clients(hass) for group in all_groups(client)]
+    )
+
+
+async def _write_scene(
+    client: HueClient, scene_id: str | None, payload: dict[str, Any]
+) -> str:
+    """Szene anlegen oder ändern. Lehnt die Bridge die Palette ab, ohne Palette nochmals."""
+    for attempt in (payload, {k: v for k, v in payload.items() if k != "palette"}):
+        try:
+            if scene_id:
+                await client.async_update_resource("scene", scene_id, attempt)
+                return scene_id
+            return await client.async_create_resource("scene", attempt)
+        except HueError:
+            if "palette" not in attempt:
+                raise
+            _LOGGER.debug("Bridge nimmt die Palette nicht – speichere ohne")
+    raise HueError("Szene konnte nicht gespeichert werden")  # pragma: no cover
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hue_plus/scene_save",
+        vol.Optional("group_id"): str,
+        vol.Optional("scene_id"): str,
+        vol.Optional("name"): vol.All(str, vol.Strip, vol.Length(min=1, max=NAME_MAX)),
+        vol.Optional("licht_uebernehmen", default=True): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_scene_save(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+) -> None:
+    """Echte Hue-Szene aus dem Licht von jetzt anlegen – oder eine bestehende ändern.
+
+    Ohne scene_id: neue Szene im Raum/der Zone group_id (gleicher Name dort = ersetzen).
+    Mit scene_id: umbenennen (name) und/oder mit dem Licht von jetzt ersetzen.
+    """
+    scene_id = msg.get("scene_id")
+    group_id = msg.get("group_id")
+    name = msg.get("name")
+    target = scene_id or group_id
+    client = next((c for c in _clients(hass) if c.get(target)), None) if target else None
+    if client is None:
+        connection.send_error(msg["id"], "not_found", "Raum oder Szene nicht gefunden")
+        return
+
+    if scene_id:
+        scene = client.get(scene_id) or {}
+        if scene.get("type") != "scene":
+            connection.send_error(msg["id"], "not_found", "Szene nicht gefunden")
+            return
+        group = client.get((scene.get("group") or {}).get("rid")) or {}
+    else:
+        group = client.get(group_id) or {}
+        if group.get("type") not in ("room", "zone"):
+            connection.send_error(msg["id"], "not_found", "Raum nicht gefunden")
+            return
+        if not name:
+            connection.send_error(msg["id"], "invalid_format", "Bitte einen Namen eingeben")
+            return
+        # gleicher Name im gleichen Raum: diese Szene ersetzen statt eine zweite anlegen
+        for other in client.of_type("scene"):
+            if (other.get("group") or {}).get("rid") == group_id and (
+                (other.get("metadata") or {}).get("name", "").strip().lower() == name.lower()
+            ):
+                scene_id = other["id"]
+                break
+
+    payload: dict[str, Any] = {}
+    if not scene_id:
+        payload = {
+            "type": "scene",
+            "metadata": {"name": name},
+            "group": {"rid": group["id"], "rtype": group["type"]},
+        }
+    elif name:
+        payload["metadata"] = {"name": name}
+
+    if not scene_id or msg["licht_uebernehmen"]:
+        actions = build_actions(client, group_light_ids(client, group))
+        if not actions:
+            connection.send_error(msg["id"], "no_lights", "In diesem Raum sind keine Lampen")
+            return
+        payload["actions"] = actions
+        if palette := build_palette(client, actions):
+            payload["palette"] = palette
+
+    if not payload:
+        connection.send_result(msg["id"], {"scene_id": scene_id})
+        return
+    try:
+        new_id = await _write_scene(client, scene_id, payload)
+        await client.async_reload_resource("scene", new_id)
+    except HueError as err:
+        connection.send_error(msg["id"], "bridge_error", str(err))
+        return
+    connection.send_result(msg["id"], {"scene_id": new_id, "ersetzt": bool(scene_id)})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "hue_plus/scene_delete", vol.Required("scene_id"): str}
+)
+@websocket_api.async_response
+async def ws_scene_delete(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+) -> None:
+    """Hue-Szene aus der Bridge löschen (verschwindet auch in der Hue App)."""
+    for client in _clients(hass):
+        if (client.get(msg["scene_id"]) or {}).get("type") == "scene":
+            try:
+                await client.async_delete_resource("scene", msg["scene_id"])
+            except HueError as err:
+                connection.send_error(msg["id"], "bridge_error", str(err))
+                return
+            connection.send_result(msg["id"])
+            return
+    connection.send_error(msg["id"], "not_found", "Szene nicht gefunden")
+
+
 @websocket_api.websocket_command({vol.Required("type"): "hue_plus/favorites"})
 @websocket_api.async_response
 async def ws_favorites(
@@ -250,6 +381,9 @@ def async_setup_websocket(hass: HomeAssistant) -> None:
         ws_scenes,
         ws_scenes_subscribe,
         ws_scene_activate,
+        ws_groups,
+        ws_scene_save,
+        ws_scene_delete,
         ws_favorites,
         ws_favorites_save,
         ws_favorites_delete,

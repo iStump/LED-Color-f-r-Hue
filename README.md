@@ -1,6 +1,6 @@
 <p align="center"><img src="custom_components/hue_plus/brand/dark_icon@2x.png" width="140" alt="LED Color für Hue"></p>
 
-# LED Color für Hue 0.4.1
+# LED Color für Hue 0.5.0
 
 **Inoffizielle** Erweiterung für Home Assistant, die die offizielle Philips-Hue-Integration ergänzt.
 Kein Produkt von Signify/Philips. «Philips» und «Hue» sind Marken von Signify.
@@ -20,6 +20,9 @@ Nach der Einrichtung erscheint in der Seitenleiste von Home Assistant **LED Colo
   Helligkeit und Verteilung einstellen. Die Lampe ändert sich sofort. Übertragen auf andere Lampen (auch gespiegelt).
 - **Szenen** – alle Hue-Szenen mit ihren echten Farben, nach Raum. Antippen schaltet ein, das kleine Symbol startet
   die Szene dynamisch. Die aktive Szene leuchtet.
+- **Neue Hue-Szene** – das Licht von jetzt als echte Hue-Szene in der Bridge speichern (inkl. Verläufe und
+  dynamischer Palette). Sie erscheint sofort auch in der Hue App, in Home Assistant und auf Hue-Schaltern.
+  Über «⋯» umbenennen, mit dem Licht von jetzt ersetzen oder löschen.
 - **Favoriten** – eigene Verläufe speichern und mit einem Tipp auf beliebige Lampen legen. Gespeichert in
   Home Assistant, also auf allen Geräten gleich.
 - **Einstellungen** – Einschaltverhalten aller Lampen auf einer Seite, nach Raum.

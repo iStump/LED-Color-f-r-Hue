@@ -3,7 +3,8 @@
  *
  * Vier Bereiche:
  *   Verläufe      – Lampe wählen, Farbpunkte antippen/ziehen, Farbe und Helligkeit wählen
- *   Szenen        – alle Hue-Szenen mit ihren echten Farben, antippen = einschalten
+ *   Szenen        – alle Hue-Szenen mit ihren echten Farben, antippen = einschalten,
+ *                   neue Hue-Szene aus dem Licht von jetzt anlegen, umbenennen, ersetzen, löschen
  *   Favoriten     – gespeicherte Verläufe auf beliebige Lampen übertragen
  *   Einstellungen – Einschaltverhalten aller Lampen, nach Raum
  *
@@ -11,7 +12,7 @@
  * (Sensoren sensor.hue_plus_…_verlauf und die Befehle hue_plus/…).
  */
 
-const VERSION = "0.4.1";
+const VERSION = "0.5.0";
 
 const MODES = {
   interpolated_palette: "Fliessend",
@@ -78,6 +79,16 @@ const EN = {
   "Kerze": "Candle", "Kaminfeuer": "Fireplace", "Prisma": "Prism", "Opal": "Opal", "Glitzern": "Glisten",
   "Unterwasser": "Underwater", "Kosmos": "Cosmos", "Sonnenstrahl": "Sunbeam", "Zauber": "Enchant",
   "Sonnenaufgang": "Sunrise", "Sonnenuntergang": "Sunset",
+  "Neue Szene": "New scene", "Szene bearbeiten": "Edit scene", "Raum": "Room", "Zone": "Zone",
+  "Name, z. B. Filmabend": "Name, e.g. Movie night", "Ersetzen": "Replace",
+  "Gibt es in diesem Raum schon – wird mit dem Licht von jetzt ersetzt.": "Already exists in this room – will be replaced with the current light.",
+  "Gespeichert wird das Licht von jetzt. Stell die Lampen vorher ein – hier unter «Verläufe», in der Hue App oder in Home Assistant.":
+    "The current light is saved. Set up the lights first – here under «Gradients», in the Hue app or in Home Assistant.",
+  "Die Szene erscheint danach auch in der Hue App und auf Hue-Schaltern.": "The scene then also appears in the Hue app and on Hue switches.",
+  "Mit dem Licht von jetzt ersetzen": "Replace with the current light", "Wirklich löschen?": "Really delete?",
+  "Szene «{name}» gespeichert.": "Scene «{name}» saved.", "Szene «{name}» ersetzt.": "Scene «{name}» replaced.",
+  "Szene «{name}» gelöscht.": "Scene «{name}» deleted.", "Keine Räume mit Lampen gefunden.": "No rooms with lights found.",
+  "Bearbeiten": "Edit", "Lädt …": "Loading …",
 };
 let LANG = "de";
 const tr = (s, v = {}) => String((LANG === "en" && EN[s]) || s).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
@@ -282,6 +293,25 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
 .scene .dyn { position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; border-radius: 50%;
   display: grid; place-items: center; background: rgba(0,0,0,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .scene .dyn.on { color: var(--accent); }
+.scene .more { position: absolute; top: 20px; left: 20px; width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(0,0,0,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  opacity: .85; }
+.scene.new { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 150px; gap: 8px;
+  background: none; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.1); color: var(--text-2); font-size: 15px; }
+.scene.new ha-icon { --mdc-icon-size: 28px; color: var(--accent); }
+.filters .add { color: var(--accent); }
+.preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin: 4px 0 14px; }
+.preview .pl { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.04); min-width: 0; }
+.preview .pl i { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; box-shadow: 0 0 14px -2px var(--g, transparent); }
+.preview .pl span { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview .pl em { font-style: normal; font-size: 12px; color: var(--text-3); }
+.preview .pl.off span { color: var(--text-3); }
+.preview .pl.off i { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.14); }
+.sheet .note { font-size: 13px; line-height: 1.45; color: var(--text-3); margin: 0 0 12px; }
+.sheet .note.warn { color: var(--accent); margin: 10px 0 0; }
+.sheet .label { font-size: 13px; color: var(--text-2); margin: 2px 0 6px; }
+.act.danger { color: #ff8a80; }
+.act.danger.armed { background: rgba(255,90,80,.18); }
 .fav .swatch { height: 64px; border-radius: 999px; }
 .empty { padding: 48px 24px; text-align: center; color: var(--text-2); border-radius: 24px; background: var(--surface); }
 
@@ -301,7 +331,8 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
 .sheet-back.on { opacity: 1; }
 .sheet { position: fixed; z-index: 21; left: 50%; bottom: 0; width: min(560px, 100%); transform: translate(-50%, 105%);
   background: #121212; border-radius: 28px 28px 0 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
-  box-shadow: 0 -20px 60px rgba(0,0,0,.6); visibility: hidden; transition: transform .5s var(--spring), visibility .5s; }
+  box-shadow: 0 -20px 60px rgba(0,0,0,.6); visibility: hidden; transition: transform .5s var(--spring), visibility .5s;
+  max-height: 88%; overflow-y: auto; overscroll-behavior: contain; }
 .sheet.on { transform: translate(-50%, 0); visibility: visible; }
 .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.2); margin: 0 auto 14px; }
 .sheet h3 { margin: 0 0 14px; font-size: 19px; }
@@ -486,6 +517,10 @@ class LedColorPanel extends HTMLElement {
     if (this._tab === "szenen") this._renderScenes();
     if (this._tab === "favoriten") this._renderFavs();
     if (this._tab === "einstellungen") this._renderSettings();
+    if (this._sceneSheet) {
+      clearTimeout(this._sceneSheetT);
+      this._sceneSheetT = setTimeout(() => this._sceneSheet && this._sceneSheet(), 600);
+    }
   }
 
   // ---------------------------------------------------------- Daten
@@ -983,16 +1018,32 @@ class LedColorPanel extends HTMLElement {
 
   // ---------------------------------------------------------- Blätter
   _openSheet(html, bind) {
+    this._sceneSheet = null;
+    this._sheetOpen = true;
     const r = this.shadowRoot, sh = r.querySelector(".sheet"), back = r.querySelector(".sheet-back");
     sh.innerHTML = `<div class="grab"></div>${html}`;
     back.style.display = "block";
     requestAnimationFrame(() => { back.classList.add("on"); sh.classList.add("on"); });
     bind(sh);
+    this._fitCard();
+  }
+  // Als Karte liegt das Blatt in der Karte: ist die Karte zu klein, wächst sie kurz mit.
+  _fitCard() {
+    if (!this._cfg) return;
+    const sh = this.shadowRoot.querySelector(".sheet");
+    this.style.minHeight = "";
+    requestAnimationFrame(() => {
+      if (!this._sheetOpen) return;
+      const need = sh.scrollHeight + 24;
+      if (this.offsetHeight < need / 0.88) this.style.minHeight = `${Math.ceil(need / 0.88)}px`;
+    });
   }
   _closeSheet() {
+    this._sceneSheet = null;
+    this._sheetOpen = false;
     const r = this.shadowRoot, sh = r.querySelector(".sheet"), back = r.querySelector(".sheet-back");
     sh.classList.remove("on"); back.classList.remove("on");
-    setTimeout(() => { if (!sh.classList.contains("on")) back.style.display = "none"; }, 350);
+    setTimeout(() => { if (!sh.classList.contains("on")) { back.style.display = "none"; if (this._cfg) this.style.minHeight = ""; } }, 350);
   }
   _lampChips(selected, exclude) {
     return this._lamps().filter((l) => l.id !== exclude).map((l) =>
@@ -1059,48 +1110,193 @@ class LedColorPanel extends HTMLElement {
     const rooms = [...new Set(all.map((s) => s.raum))];
     if (this._room && rooms.length && !rooms.includes(this._room) && !this._cfg?.raum) this._room = null;
     const f = r.querySelector(".filters");
-    const fsig = rooms.join("|") + this._room;
+    const fsig = rooms.join("|") + this._room + LANG;
     if (f.dataset.sig !== fsig) {
       f.dataset.sig = fsig;
       f.innerHTML = [`<button data-r="" aria-pressed="${!this._room}">${tr("Alle")}</button>`]
-        .concat(rooms.map((x) => `<button data-r="${esc(x)}" aria-pressed="${x === this._room}">${esc(x)}</button>`)).join("");
-      f.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { this._room = b.dataset.r || null; this._renderScenes(); }));
+        .concat(rooms.map((x) => `<button data-r="${esc(x)}" aria-pressed="${x === this._room}">${esc(x)}</button>`))
+        .concat([`<button class="add" data-new="1">＋ ${tr("Neue Szene")}</button>`]).join("");
+      f.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        if (b.dataset.new) return this._newSceneSheet(this._room ? all.find((s) => s.raum === this._room)?.raum_id : null);
+        this._room = b.dataset.r || null; this._renderScenes();
+      }));
     }
     const box = r.querySelector(".scenes");
-    if (!all.length) { box.innerHTML = `<div class="empty" style="margin-top:14px">${tr("Noch keine Szenen geladen. Sind in der Hue App Szenen angelegt?")}</div>`; return; }
+    if (!all.length) {
+      if (box.dataset.sig === "empty") return;
+      box.dataset.sig = "empty";
+      box.innerHTML = `<div class="empty" style="margin-top:14px">${tr("Noch keine Szenen geladen. Sind in der Hue App Szenen angelegt?")}
+        <div style="margin-top:16px"><button class="act primary" style="display:inline-flex;padding:12px 20px" data-new="1">＋ ${tr("Neue Szene")}</button></div></div>`;
+      box.querySelector("[data-new]").addEventListener("click", () => this._newSceneSheet(null));
+      return;
+    }
     const shown = this._room ? all.filter((s) => s.raum === this._room) : all;
     const groups = {};
     shown.forEach((s) => (groups[s.raum] = groups[s.raum] || []).push(s));
-    const sig = JSON.stringify(shown.map((s) => [s.id, s.status, s.name])) + this._room;
+    const sig = JSON.stringify(shown.map((s) => [s.id, s.status, s.name, s.lichter.map((l) => l.farben.join() + l.an)])) + this._room + LANG;
     if (box.dataset.sig === sig) return;
     box.dataset.sig = sig;
     box.innerHTML = Object.entries(groups).map(([room, list]) => `
       ${this._cfg?.raum ? "" : `<h2>${esc(room)}<span>${plural(list.length, "{n} Szene", "{n} Szenen")}</span></h2>`}
-      <div class="grid">${list.map((s) => this._sceneCard(s)).join("")}</div>`).join("");
+      <div class="grid">${list.map((s) => this._sceneCard(s)).join("")}
+        <button class="scene new" data-raum="${esc(list[0].raum_id || "")}"><ha-icon icon="mdi:plus-circle-outline"></ha-icon>${tr("Neue Szene")}</button></div>`).join("");
     box.querySelectorAll(".scene").forEach((card) => {
       card.addEventListener("click", (e) => {
+        if (card.classList.contains("new")) return this._newSceneSheet(card.dataset.raum || null);
+        const scene = this._scenes.find((x) => x.id === card.dataset.id);
+        if (e.target.closest(".more")) return scene && this._editSceneSheet(scene);
         const dyn = e.target.closest(".dyn");
         this._activate(card.dataset.id, !!dyn);
       });
     });
   }
-  _sceneCard(s) {
+  _sceneColors(s) {
     let colors = [];
     s.lichter.forEach((l) => { if (l.an) colors.push(...l.farben); });
     colors = colors.filter((c, i) => c !== colors[i - 1]);
     if (s.status === "dynamic_palette" && s.palette.length) colors = s.palette;
-    if (!colors.length) colors = ["#1a1a1a"];
+    return colors.length ? colors : ["#1a1a1a"];
+  }
+  _sceneCard(s) {
+    const colors = this._sceneColors(s);
     const active = s.status !== "inactive";
     const lit = s.lichter.filter((l) => l.an).length;
     const state = s.status === "dynamic_palette" ? tr("Läuft dynamisch") : s.status === "static" ? tr("Aktiv") : plural(lit, "{n} Lampe", "{n} Lampen");
     return `<button class="scene ${active ? "active" : ""}" data-id="${esc(s.id)}" style="--glow:${colors[0]}">
       <div class="swatch" style="background:${linear("to right", colors)}"></div>
+      <span class="more" title="${tr("Bearbeiten")}" aria-label="${tr("Bearbeiten")}"><ha-icon icon="mdi:dots-horizontal"></ha-icon></span>
       ${s.dynamisch_moeglich ? `<span class="dyn ${s.status === "dynamic_palette" ? "on" : ""}" title="${tr("Dynamisch starten")}"><ha-icon icon="mdi:motion-play-outline"></ha-icon></span>` : ""}
       <b>${esc(s.name)}</b><small>${state}</small></button>`;
   }
   async _activate(id, dynamisch) {
     try { await this._hass.callWS({ type: "hue_plus/scene_activate", scene_id: id, dynamisch }); }
     catch (e) { this._toast(e?.message || String(e)); }
+  }
+  async _loadGroups() {
+    try { return (await this._hass.callWS({ type: "hue_plus/groups" })) || []; }
+    catch (e) { this._toast(e?.message || String(e)); return []; }
+  }
+  _previewHtml(group) {
+    if (!group) return "";
+    return group.lichter.map((l) => {
+      const c = displayColors(l.farben, l.modus);
+      const off = !l.an || l.erreichbar === false;
+      const bg = off ? "#1c1c1c" : c.length > 1 ? `conic-gradient(${c.concat(c[0]).join(", ")})` : c[0];
+      const info = l.erreichbar === false ? tr("ohne Strom") : !l.an ? tr("aus") : l.helligkeit != null ? `${Math.round(l.helligkeit)} %` : "";
+      // «Wohnzimmer Signe L» im Raum Wohnzimmer → «Signe L»
+      const pre = group.name + " ", name = l.name.startsWith(pre) && l.name.length > pre.length ? l.name.slice(pre.length) : l.name;
+      return `<div class="pl ${off ? "off" : ""}" title="${esc(l.name)}"><i style="background:${bg};--g:${off ? "transparent" : c[0]}"></i><span>${esc(name)}</span><em>${info}</em></div>`;
+    }).join("");
+  }
+
+  async _newSceneSheet(preId) {
+    this._openSheet(`<h3>${tr("Neue Szene")}</h3><div class="note">${tr("Lädt …")}</div>`, () => {});
+    let groups = await this._loadGroups();
+    if (!this._sheetOpen) return; // inzwischen geschlossen
+    if (!groups.length) {
+      this._openSheet(`<h3>${tr("Neue Szene")}</h3><div class="note">${tr("Keine Räume mit Lampen gefunden.")}</div>
+        <div class="bar"><button class="act" data-x="cancel">${tr("Abbrechen")}</button></div>`,
+      (sh) => sh.querySelector('[data-x="cancel"]').addEventListener("click", () => this._closeSheet()));
+      return;
+    }
+    const byName = this._cfg?.raum && groups.find((g) => g.name === this._cfg.raum);
+    let sel = groups.find((g) => g.id === preId) || byName || groups.find((g) => g.name === this._room) || groups[0];
+    this._openSheet(`<h3>${tr("Neue Szene")}</h3>
+      <div class="note">${tr("Gespeichert wird das Licht von jetzt. Stell die Lampen vorher ein – hier unter «Verläufe», in der Hue App oder in Home Assistant.")}</div>
+      <div class="label">${tr("Raum")}</div>
+      <div class="chips rooms">${groups.map((g) => `<button data-id="${esc(g.id)}" aria-pressed="${g.id === sel.id}">${esc(g.name)}${g.typ === "zone" ? ` <span style="opacity:.5">· ${tr("Zone")}</span>` : ""}</button>`).join("")}</div>
+      <div class="preview"></div>
+      <input type="text" maxlength="32" placeholder="${tr("Name, z. B. Filmabend")}" aria-label="Name">
+      <div class="note warn" hidden>${tr("Gibt es in diesem Raum schon – wird mit dem Licht von jetzt ersetzt.")}</div>
+      <div class="note" style="margin:12px 0 0">${tr("Die Szene erscheint danach auch in der Hue App und auf Hue-Schaltern.")}</div>
+      <div class="bar"><button class="act" data-x="cancel">${tr("Abbrechen")}</button><button class="act primary" data-x="save">${tr("Speichern")}</button></div>`,
+    (sh) => {
+      const input = sh.querySelector("input"), warn = sh.querySelector(".warn"), saveBtn = sh.querySelector('[data-x="save"]');
+      const existing = () => {
+        const n = input.value.trim().toLowerCase();
+        return n ? this._scenes.find((x) => x.raum_id === sel.id && x.name.trim().toLowerCase() === n) : null;
+      };
+      const paint = () => {
+        sh.querySelector(".preview").innerHTML = this._previewHtml(sel);
+        const ex = existing();
+        warn.hidden = !ex;
+        saveBtn.textContent = ex ? tr("Ersetzen") : tr("Speichern");
+      };
+      paint();
+      sh.querySelectorAll(".rooms button").forEach((b) => b.addEventListener("click", () => {
+        sel = groups.find((g) => g.id === b.dataset.id) || sel;
+        sh.querySelectorAll(".rooms button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        paint();
+      }));
+      input.addEventListener("input", paint);
+      setTimeout(() => input.focus(), 300);
+      // Vorschau live halten, solange das Blatt offen ist
+      this._sceneSheet = async () => {
+        const fresh = await this._loadGroups();
+        if (!this._sceneSheet || !fresh.length) return;
+        groups = fresh; sel = groups.find((g) => g.id === sel.id) || sel; paint();
+      };
+      sh.querySelector('[data-x="cancel"]').addEventListener("click", () => this._closeSheet());
+      let busy = false;
+      const save = async () => {
+        const name = input.value.trim();
+        if (!name) return this._toast(tr("Bitte einen Namen eingeben."));
+        if (busy) return; busy = true; saveBtn.disabled = true;
+        try {
+          const res = await this._hass.callWS({ type: "hue_plus/scene_save", group_id: sel.id, name });
+          this._closeSheet();
+          this._toast(tr(res?.ersetzt ? "Szene «{name}» ersetzt." : "Szene «{name}» gespeichert.", { name }));
+          if (!this._cfg?.raum) { this._room = sel.name; this._renderScenes(); }
+        } catch (e) { this._toast(e?.message || String(e)); }
+        busy = false; saveBtn.disabled = false;
+      };
+      saveBtn.addEventListener("click", save);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+    });
+  }
+
+  async _editSceneSheet(scene) {
+    let groups = await this._loadGroups();
+    let group = groups.find((g) => g.id === scene.raum_id);
+    this._openSheet(`<h3>${tr("Szene bearbeiten")}</h3>
+      <div class="fav"><div class="swatch" style="background:${linear("to right", this._sceneColors(scene))};margin-bottom:14px"></div></div>
+      <input type="text" maxlength="32" value="${esc(scene.name)}" aria-label="Name">
+      <div class="toggle">${tr("Mit dem Licht von jetzt ersetzen")}<button class="switch" role="switch" aria-checked="false"></button></div>
+      <div class="preview" hidden></div>
+      <div class="bar"><button class="act danger" data-x="del">${tr("Löschen")}</button><button class="act" data-x="cancel">${tr("Abbrechen")}</button><button class="act primary" data-x="save">${tr("Speichern")}</button></div>`,
+    (sh) => {
+      const input = sh.querySelector("input"), sw = sh.querySelector(".switch"), prev = sh.querySelector(".preview");
+      const replace = this._bindSwitch(sh);
+      const paint = () => { prev.hidden = !replace(); prev.innerHTML = this._previewHtml(group); };
+      sw.addEventListener("click", paint);
+      this._sceneSheet = async () => {
+        const fresh = await this._loadGroups();
+        if (!this._sceneSheet || !fresh.length) return;
+        groups = fresh; group = groups.find((g) => g.id === scene.raum_id) || group; paint();
+      };
+      sh.querySelector('[data-x="cancel"]').addEventListener("click", () => this._closeSheet());
+      const del = sh.querySelector('[data-x="del"]');
+      del.addEventListener("click", async () => {
+        if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = tr("Wirklich löschen?"); return; }
+        try {
+          await this._hass.callWS({ type: "hue_plus/scene_delete", scene_id: scene.id });
+          this._closeSheet(); this._toast(tr("Szene «{name}» gelöscht.", { name: scene.name }));
+        } catch (e) { this._toast(e?.message || String(e)); }
+      });
+      const save = async () => {
+        const name = input.value.trim();
+        if (!name) return this._toast(tr("Bitte einen Namen eingeben."));
+        const msg = { type: "hue_plus/scene_save", scene_id: scene.id, licht_uebernehmen: replace() };
+        if (name !== scene.name) msg.name = name;
+        try {
+          await this._hass.callWS(msg);
+          this._closeSheet();
+          this._toast(tr(replace() ? "Szene «{name}» ersetzt." : "Szene «{name}» gespeichert.", { name }));
+        } catch (e) { this._toast(e?.message || String(e)); }
+      };
+      sh.querySelector('[data-x="save"]').addEventListener("click", save);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+    });
   }
 
   // ---------------------------------------------------------- Favoriten

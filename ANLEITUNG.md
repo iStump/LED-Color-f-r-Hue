@@ -25,6 +25,13 @@ neu starten → Seite einmal neu laden. Nichts löschen, nichts neu einrichten.
 - **Effekte:** Kerze, Kaminfeuer, Funkeln … antippen. Sonnenaufgang/-untergang mit wählbarer Dauer.
   Nochmals antippen oder «Effekt aus» beendet den Effekt.
 - **Szenen:** alle Hue-Szenen mit echten Farben. Antippen = einschalten, kleines Symbol = dynamisch.
+- **Neue Szene:** Lampen zuerst so einstellen, wie die Szene sein soll (hier unter «Verläufe», in der
+  Hue App oder in Home Assistant). Dann «＋ Neue Szene» → Raum wählen → Name → *Speichern*.
+  Gespeichert wird genau das Licht von jetzt – auch die Verläufe der Signe, und dynamisch geht auch.
+  Die Szene ist danach eine echte Hue-Szene: in der Hue App, in Home Assistant (`scene.…`) und auf
+  Hue-Schaltern. Gleicher Name im gleichen Raum = die Szene wird ersetzt statt doppelt angelegt.
+- **«⋯» auf einer Szene:** umbenennen, «Mit dem Licht von jetzt ersetzen» oder löschen
+  (zweimal tippen). Das gilt auch für Szenen aus der Hue App.
 - **Favoriten:** gespeicherte Verläufe (in Home Assistant, auf allen Geräten gleich) auf Lampen legen.
 - **Einstellungen:** Einschaltverhalten aller Lampen nach Raum.
 

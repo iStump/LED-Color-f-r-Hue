@@ -164,6 +164,35 @@ class HueClient:
         _LOGGER.debug("PUT %s/%s %s", rtype, rid, payload)
         await self.request("put", f"resource/{rtype}/{rid}", payload)
 
+    async def async_create_resource(self, rtype: str, payload: dict[str, Any]) -> str:
+        """Neue Ressource anlegen (z. B. Szene) – gibt die neue ID zurück."""
+        _LOGGER.debug("POST %s %s", rtype, payload)
+        data = await self.request("post", f"resource/{rtype}", payload)
+        for item in data:
+            if item.get("rid"):
+                return item["rid"]
+        raise HueError("Die Bridge hat keine ID zurückgegeben")
+
+    async def async_delete_resource(self, rtype: str, rid: str) -> None:
+        """Ressource löschen (z. B. Szene)."""
+        _LOGGER.debug("DELETE %s/%s", rtype, rid)
+        await self.request("delete", f"resource/{rtype}/{rid}")
+        if removed := self.resources.pop(rid, None):
+            self._notify("delete", removed)
+
+    async def async_reload_resource(self, rtype: str, rid: str) -> dict[str, Any] | None:
+        """Eine Ressource frisch holen und in den Zwischenspeicher legen.
+
+        Der Event-Stream meldet das auch, aber so ist die Seite sofort aktuell.
+        """
+        data = await self.request("get", f"resource/{rtype}/{rid}")
+        if not data:
+            return None
+        known = rid in self.resources
+        self.resources[rid] = data[0]
+        self._notify("update" if known else "add", data[0])
+        return data[0]
+
     # -------------------------------------------------------------- Hilfsfunktionen
 
     def of_type(self, rtype: str) -> list[dict[str, Any]]:
