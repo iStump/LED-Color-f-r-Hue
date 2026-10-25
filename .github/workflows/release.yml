@@ -5,7 +5,7 @@ name: Release
 on:
   push:
     branches: [main]
-    paths: [custom_components/hue_plus/manifest.json]
+    paths: [custom_components/hue_plus/manifest.json, .github/workflows/release.yml]
   workflow_dispatch:
 
 permissions:
