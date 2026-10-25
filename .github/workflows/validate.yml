@@ -14,6 +14,9 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
+          # Nur für den öffentlichen HACS-Store nötig – LED Color wird bewusst
+          # nicht öffentlich gelistet, darum ausgelassen.
+          ignore: brands description topics
   hassfest:
     runs-on: ubuntu-latest
     steps:
