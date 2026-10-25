@@ -81,6 +81,9 @@
     },
     "powerup_custom": {
       "message": "«Eigene Einstellung» kann nur in der Hue App festgelegt werden (dort bei der Lampe unter Einstellungen)."
+    },
+    "effect_not_supported": {
+      "message": "{name} kennt den Effekt «{effect}» nicht."
     }
   },
   "selector": {
@@ -135,6 +138,24 @@
         "uebergang": {
           "name": "Übergang",
           "description": "Dauer des Wechsels in Sekunden."
+        }
+      }
+    },
+    "set_effect": {
+      "name": "Effekt starten",
+      "description": "Startet einen Effekt wie Kerze, Kaminfeuer, Funkeln oder einen Zeit-Effekt wie Sonnenaufgang. «aus» beendet den Effekt.",
+      "fields": {
+        "effekt": {
+          "name": "Effekt",
+          "description": "z. B. candle, fire, sparkle, prism, opal, glisten, underwater, cosmos, sunbeam, enchant, sunrise, sunset oder aus"
+        },
+        "dauer": {
+          "name": "Dauer",
+          "description": "Nur für Sonnenaufgang/-untergang: Dauer in Sekunden."
+        },
+        "tempo": {
+          "name": "Tempo",
+          "description": "0 = langsam, 1 = schnell (nicht jede Lampe kann das)."
         }
       }
     }

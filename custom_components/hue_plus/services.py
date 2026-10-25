@@ -1,4 +1,4 @@
-"""Aktionen hue_plus.set_gradient (Verlauf setzen) und hue_plus.copy_gradient (kopieren)."""
+"""Aktionen hue_plus.set_gradient, hue_plus.copy_gradient und hue_plus.set_effect."""
 
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ from .const import (
     DOMAIN,
     GRADIENT_MODES,
     SERVICE_COPY_GRADIENT,
+    SERVICE_SET_EFFECT,
     SERVICE_SET_GRADIENT,
 )
 
@@ -49,6 +50,9 @@ ATTR_UEBERGANG = "uebergang"
 ATTR_VON = "von"
 ATTR_GESPIEGELT = "gespiegelt"
 ATTR_HELLIGKEIT_MIT = "helligkeit_uebernehmen"
+ATTR_EFFEKT = "effekt"
+ATTR_DAUER = "dauer"
+ATTR_TEMPO = "tempo"
 
 SET_GRADIENT_SCHEMA = vol.Schema(
     {
@@ -69,6 +73,54 @@ COPY_GRADIENT_SCHEMA = vol.Schema(
         vol.Optional(ATTR_UEBERGANG): vol.All(vol.Coerce(float), vol.Range(0, 3600)),
     }
 )
+
+SET_EFFECT_SCHEMA = vol.Schema(
+    {
+        **cv.ENTITY_SERVICE_FIELDS,
+        vol.Required(ATTR_EFFEKT): cv.string,
+        vol.Optional(ATTR_DAUER): vol.All(vol.Coerce(float), vol.Range(1, 21600)),
+        vol.Optional(ATTR_TEMPO): vol.All(vol.Coerce(float), vol.Range(0, 1)),
+    }
+)
+
+
+def build_effect_payload(light: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
+    """Befehl für einen Effekt (Kerze, Feuer …) oder Zeit-Effekt (Sonnenaufgang …)."""
+    name = light.get("metadata", {}).get("name", light.get("id"))
+    effect = str(data[ATTR_EFFEKT]).strip().lower()
+    if effect in ("aus", "off", "none", "no_effect", ""):
+        payload: dict[str, Any] = {}
+        if "effects_v2" in light:
+            payload["effects_v2"] = {"action": {"effect": "no_effect"}}
+        elif "effects" in light:
+            payload["effects"] = {"effect": "no_effect"}
+        if "timed_effects" in light:
+            payload["timed_effects"] = {"effect": "no_effect"}
+        return payload
+
+    timed = light.get("timed_effects") or {}
+    if effect in (timed.get("effect_values") or timed.get("status_values") or []):
+        payload = {"timed_effects": {"effect": effect}}
+        if (dauer := data.get(ATTR_DAUER)) is not None:
+            payload["timed_effects"]["duration"] = int(dauer * 1000)
+        return payload
+
+    v2 = light.get("effects_v2") or {}
+    if effect in ((v2.get("action") or {}).get("effect_values") or []):
+        action: dict[str, Any] = {"effect": effect}
+        if (tempo := data.get(ATTR_TEMPO)) is not None:
+            action["parameters"] = {"speed": float(tempo)}
+        return {"on": {"on": True}, "effects_v2": {"action": action}}
+
+    v1 = light.get("effects") or {}
+    if effect in (v1.get("effect_values") or v1.get("status_values") or []):
+        return {"on": {"on": True}, "effects": {"effect": effect}}
+
+    raise ServiceValidationError(
+        translation_domain=DOMAIN,
+        translation_key="effect_not_supported",
+        translation_placeholders={"name": name, "effect": effect},
+    )
 
 
 def _find_light(hass: HomeAssistant, entity_id: str) -> tuple[HueClient, str] | None:
@@ -269,4 +321,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_COPY_GRADIENT, _copy_gradient, schema=COPY_GRADIENT_SCHEMA
+    )
+
+    async def _set_effect(call: ServiceCall) -> None:
+        for client, rid in _targets(call):
+            await _send(client, rid, build_effect_payload(client.get(rid) or {}, call.data))
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_EFFECT, _set_effect, schema=SET_EFFECT_SCHEMA
     )

@@ -14,6 +14,7 @@ PANEL_URL = "led-color"
 STATIC_URL = "/hue_plus_static"
 _DATA_STATIC = f"{DOMAIN}_static_registered"
 _DATA_PANEL = f"{DOMAIN}_panel_registered"
+_DATA_EXTRA = f"{DOMAIN}_extra_js"
 
 
 async def async_register_panel(hass: HomeAssistant, version: str) -> None:
@@ -29,6 +30,12 @@ async def async_register_panel(hass: HomeAssistant, version: str) -> None:
         hass.data[_DATA_STATIC] = True
     if hass.data.get(_DATA_PANEL):
         return
+    # Dieselbe Datei auf allen Seiten laden: so gibt es die Karte
+    # «custom:led-color-card» in jedem Dashboard, ohne Ressource von Hand.
+    url = f"{STATIC_URL}/led-color-panel.js?v={version}"
+    if not hass.data.get(_DATA_EXTRA):
+        frontend.add_extra_js_url(hass, url)
+        hass.data[_DATA_EXTRA] = url
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=PANEL_URL,
@@ -36,7 +43,7 @@ async def async_register_panel(hass: HomeAssistant, version: str) -> None:
         sidebar_title="LED Color",
         sidebar_icon="mdi:gradient-horizontal",
         # ?v=… sorgt dafür, dass nach einem Update sofort die neue Seite geladen wird
-        module_url=f"{STATIC_URL}/led-color-panel.js?v={version}",
+        module_url=url,
         require_admin=False,
         config={"version": version},
     )

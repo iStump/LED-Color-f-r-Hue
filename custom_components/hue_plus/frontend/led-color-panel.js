@@ -11,7 +11,7 @@
  * (Sensoren sensor.hue_plus_…_verlauf und die Befehle hue_plus/…).
  */
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 
 const MODES = {
   interpolated_palette: "Fliessend",
@@ -34,6 +34,60 @@ const WHITES = [
   ["6500 K", "#f5f3ff"],
 ];
 const SLOTS = 10; // max. Farben, die weich überblendet werden
+const EFFECTS = {
+  candle: "Kerze", fire: "Kaminfeuer", prism: "Prisma", sparkle: "Funkeln", opal: "Opal", glisten: "Glitzern",
+  underwater: "Unterwasser", cosmos: "Kosmos", sunbeam: "Sonnenstrahl", enchant: "Zauber",
+  sunrise: "Sonnenaufgang", sunset: "Sonnenuntergang",
+};
+const DURATIONS = [1, 5, 10, 20, 30]; // Minuten für Sonnenaufgang/-untergang
+
+// ------------------------------------------------------------------ Sprache
+// Deutsch ist die Grundsprache; ist Home Assistant auf einer anderen Sprache, kommt Englisch.
+const EN = {
+  "für Hue": "for Hue", "Verläufe": "Gradients", "Szenen": "Scenes", "Favoriten": "Favorites", "Einstellungen": "Settings",
+  "Farbe": "Color", "Helligkeit": "Brightness", "Verteilung": "Distribution", "Effekte": "Effects", "Dauer": "Duration",
+  "{n} Min.": "{n} min", "Gekoppelt mit": "Linked with", "Keine": "None", "Effekt aus": "Effect off",
+  "Fliessend": "Smooth", "Gespiegelt": "Mirrored", "Abschnitte": "Segments", "Funkeln": "Sparkle", "einfarbig": "single color",
+  "Standard": "Default", "Wie vorher": "As before", "Letzte Farbe": "Last color", "Eigene (Hue App)": "Custom (Hue app)",
+  "Punkt {n}: {hex}": "Point {n}: {hex}", "Punkt dazu": "Add point", "Punkt weg": "Remove point", "Umdrehen": "Reverse",
+  "Übertragen": "Copy to…", "Als Favorit": "Save favorite", "Zurück": "Undo",
+  "ohne Strom": "no power", "aus": "off", "Lampe": "Light", "Farbpunkt": "Color point", "Farbe wählen": "Pick color",
+  "Licht ein/aus": "Light on/off",
+  "Keine Lampe mit Farbverlauf gefunden. Läuft LED Color für Hue?": "No gradient light found. Is LED Color for Hue running?",
+  "Lampe hat keinen Strom": "Light has no power", "Hue Sync steuert gerade diese Lampe": "Hue Sync is controlling this light",
+  "Punkt antippen, um die Farbe zu ändern. Ziehen, um die Reihenfolge zu ändern.": "Tap a point to change its color. Drag to reorder.",
+  "Punkt antippen, um die Farbe zu ändern.": "Tap a point to change its color.",
+  "Gekoppelt: {name} macht mit.": "Linked: {name} follows.", "Gekoppelt: {name} macht gespiegelt mit.": "Linked: {name} follows mirrored.",
+  "«{name}» übertragen auf": "Copy «{name}» to", "Gespiegelt (Reihenfolge umgedreht)": "Mirrored (reversed order)",
+  "Abbrechen": "Cancel", "Bitte mindestens eine Lampe wählen.": "Please choose at least one light.",
+  "Übertragen auf {n} Lampe.": "Copied to {n} light.", "Übertragen auf {n} Lampen.": "Copied to {n} lights.",
+  "Als Favorit speichern": "Save as favorite", "Name, z. B. Sonnenuntergang": "Name, e.g. Sunset", "Speichern": "Save",
+  "Bitte einen Namen eingeben.": "Please enter a name.", "Gespeichert: {name}": "Saved: {name}",
+  "Alle": "All", "Noch keine Szenen geladen. Sind in der Hue App Szenen angelegt?": "No scenes loaded yet. Are there scenes in the Hue app?",
+  "{n} Szene": "{n} scene", "{n} Szenen": "{n} scenes", "Läuft dynamisch": "Running dynamically", "Aktiv": "Active",
+  "{n} Lampe": "{n} light", "{n} Lampen": "{n} lights", "Dynamisch starten": "Start dynamically",
+  "Noch keine Favoriten.<br>Stell unter «Verläufe» einen Verlauf zusammen und tippe auf «Als Favorit».":
+    "No favorites yet.<br>Build a gradient under «Gradients» and tap «Save favorite».",
+  "Deine Verläufe": "Your gradients", "{n} Farbe": "{n} color", "{n} Farben": "{n} colors",
+  "Auf welche Lampen?": "Which lights?", "Löschen": "Delete", "Anwenden": "Apply",
+  "Gelöscht: {name}": "Deleted: {name}", "«{name}» angewendet.": "«{name}» applied.",
+  "Keine Einstellungen gefunden.": "No settings found.", "Ohne Raum": "No area",
+  "Einschaltverhalten": "Power-on behavior", "Empfindlichkeit": "Sensitivity", "MotionAware Empfindlichkeit": "MotionAware sensitivity",
+  "Einschaltverhalten: was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter. Empfindlichkeit: wie leicht Bewegungsmelder und MotionAware auslösen.":
+    "Power-on behavior: what a light does when power returns, for example after the wall switch. Sensitivity: how easily motion sensors and MotionAware trigger.",
+  "Kerze": "Candle", "Kaminfeuer": "Fireplace", "Prisma": "Prism", "Opal": "Opal", "Glitzern": "Glisten",
+  "Unterwasser": "Underwater", "Kosmos": "Cosmos", "Sonnenstrahl": "Sunbeam", "Zauber": "Enchant",
+  "Sonnenaufgang": "Sunrise", "Sonnenuntergang": "Sunset",
+};
+let LANG = "de";
+const tr = (s, v = {}) => String((LANG === "en" && EN[s]) || s).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
+const plural = (n, one, many) => tr(n === 1 ? one : many, { n });
+const modeLabel = (m) => tr(MODES[m] || "einfarbig");
+const effectLabel = (e) => tr(EFFECTS[e] || e);
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(`ledcolor.${k}`)) ?? d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(`ledcolor.${k}`, JSON.stringify(v)); } catch (e) { /* privat/gesperrt */ } },
+};
 
 // ------------------------------------------------------------------ Farben
 
@@ -108,7 +162,7 @@ const STYLE = `
   --accent-soft: rgba(233,196,138,.14);
   --spring: cubic-bezier(.34,1.56,.64,1);
   --ease: cubic-bezier(.2,.8,.2,1);
-  display: block; min-height: 100vh; background: var(--bg); color: var(--text);
+  display: block; min-height: 100vh; background: var(--bg); color: var(--text); container-type: inline-size;
   font-family: ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
 }
@@ -150,7 +204,9 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
 
 /* ---------- Editor */
 .editor { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .9fr); gap: 22px; align-items: start; }
-@media (max-width: 860px) { .editor { grid-template-columns: 1fr; } }
+@container (max-width: 860px) { .editor { grid-template-columns: 1fr; } }
+/* breit: Lampe bleibt beim Scrollen der Bedienelemente stehen */
+@container (min-width: 861px) { .editor .stage { position: sticky; top: 76px; } :host([card]) .editor .stage { top: 12px; } }
 .stage { position: relative; aspect-ratio: 4 / 3.4; border-radius: 28px; overflow: hidden; background: #000;
   box-shadow: inset 0 0 0 1px var(--line); touch-action: none; user-select: none; -webkit-user-select: none;
   transition: --c0 .7s, --c1 .7s, --c2 .7s, --c3 .7s, --c4 .7s, --c5 .7s, --c6 .7s, --c7 .7s, --c8 .7s, --c9 .7s; }
@@ -184,12 +240,12 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
   background: radial-gradient(circle closest-side, #fff, rgba(255,255,255,0) 100%),
               conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
   box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 10px 40px rgba(0,0,0,.6); }
-@media (max-width: 420px) { .disc { width: 160px; height: 160px; } }
+@container (max-width: 420px) { .disc { width: 160px; height: 160px; } }
 .knob { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 3px solid #fff;
   box-shadow: 0 2px 10px rgba(0,0,0,.6); pointer-events: none; transition: transform .25s var(--spring); }
 .disc.active .knob { transform: scale(1.25); }
 .whites { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.whites button { height: 40px; border-radius: 14px; font-size: 12px; color: rgba(0,0,0,.6); font-weight: 600;
+.whites button { height: 40px; border-radius: 14px; font-size: 11.5px; white-space: nowrap; letter-spacing: -.01em; color: rgba(0,0,0,.6); font-weight: 600;
   transition: transform .3s var(--spring); }
 .whites button:active { transform: scale(.94); }
 .slider { position: relative; height: 44px; border-radius: 16px; background: rgba(255,255,255,.06); touch-action: none; overflow: hidden; }
@@ -235,7 +291,7 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
 .row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 1.6fr); gap: 14px; align-items: center; padding: 12px 0;
   border-top: 1px solid var(--line); }
 .row:first-of-type { border-top: 0; }
-@media (max-width: 640px) { .row { grid-template-columns: 1fr; gap: 8px; } }
+@container (max-width: 640px) { .row { grid-template-columns: 1fr; gap: 8px; } }
 .row .name { font-size: 15px; }
 .row .name small { display: block; color: var(--text-3); font-size: 12px; }
 .row .sens { display: flex; align-items: center; gap: 12px; }
@@ -270,7 +326,7 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
   padding: 12px 18px; border-radius: 16px; background: #1c1c1c; box-shadow: 0 10px 30px rgba(0,0,0,.6); font-size: 14px;
   opacity: 0; visibility: hidden; transition: transform .45s var(--spring), opacity .3s, visibility .45s; }
 .toast.on { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
-@media (max-width: 720px) {
+@container (max-width: 720px) {
   header { flex-wrap: wrap; padding: 10px 16px 10px; gap: 8px 10px; }
   .tabs { order: 3; width: 100%; margin-left: 0; }
   .tabs button { flex: 1 1 0; padding: 8px 2px; font-size: 14px; }
@@ -279,6 +335,13 @@ h2 span { font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 1
   .picker { grid-template-columns: 1fr; justify-items: center; }
   .whites { width: 100%; }
 }
+/* ---------- als Karte im Dashboard */
+:host([card]) { min-height: 0; border-radius: 20px; overflow: hidden; }
+:host([card]) header { position: static; padding: 14px 16px 6px; background: none; }
+:host([card]) main { padding: 4px 16px 18px; }
+:host([card]) .sheet, :host([card]) .sheet-back, :host([card]) .toast { position: absolute; }
+:host([card]) { position: relative; }
+.pair-note { font-size: 13px; color: var(--accent); margin-top: 10px; min-height: 1em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
 }
@@ -299,11 +362,15 @@ class LedColorPanel extends HTMLElement {
     this._room = null;
     this._favs = [];
     this._busySliders = new Set();
+    this._hist = [];
+    this._lastSnap = 0;
+    this._dauer = store.get("dauer", 10);
   }
 
   set hass(hass) {
     const first = !this._hass;
     this._hass = hass;
+    LANG = String(hass.locale?.language || hass.language || "de").toLowerCase().startsWith("de") ? "de" : "en";
     if (first) this._init();
     if (!this._raf) this._raf = requestAnimationFrame(() => { this._raf = null; this._update(); });
   }
@@ -318,36 +385,47 @@ class LedColorPanel extends HTMLElement {
 
   // ---------------------------------------------------------- Grundgerüst
   _init() {
-    const r = this.shadowRoot;
-    r.innerHTML = `<style>${STYLE}</style>
-      <header>
+    const r = this.shadowRoot, cfg = this._cfg;
+    const ALL = ["verlauf", "szenen", "favoriten", "einstellungen"];
+    const LABEL = { verlauf: "Verläufe", szenen: "Szenen", favoriten: "Favoriten", einstellungen: "Einstellungen" };
+    // Als Karte: nur die gewünschten Bereiche; als Seite: alle
+    this._views = cfg ? (cfg.ansichten || (cfg.tabs ? ALL : [cfg.ansicht || "verlauf"])).filter((v) => ALL.includes(v)) : ALL;
+    if (!this._views.length) this._views = ["verlauf"];
+    this._tab = cfg ? (this._views.includes(cfg.ansicht) ? cfg.ansicht : this._views[0]) : this._tab;
+    if (cfg?.lampe) this._lamp = cfg.lampe;
+    if (cfg?.raum) this._room = cfg.raum;
+    const showTabs = this._views.length > 1;
+    const head = cfg
+      ? (cfg.titel || showTabs ? `<header>${cfg.titel ? `<div class="title">${esc(cfg.titel)}</div>` : ""}${showTabs ? "<nav class=\"tabs\" role=\"tablist\"><span class=\"pill\"></span>" + this._views.map((v) => `<button role="tab" data-tab="${v}">${tr(LABEL[v])}</button>`).join("") + "</nav>" : ""}</header>` : "")
+      : `<header>
         <span class="menu"></span>
-        <div class="title">LED Color <small>für Hue</small></div>
-        <nav class="tabs" role="tablist">
-          <span class="pill"></span>
-          <button role="tab" data-tab="verlauf">Verläufe</button>
-          <button role="tab" data-tab="szenen">Szenen</button>
-          <button role="tab" data-tab="favoriten">Favoriten</button>
-          <button role="tab" data-tab="einstellungen">Einstellungen</button>
-        </nav>
-      </header>
+        <div class="title">LED Color <small>${tr("für Hue")}</small></div>
+        <nav class="tabs" role="tablist"><span class="pill"></span>${ALL.map((v) => `<button role="tab" data-tab="${v}">${tr(LABEL[v])}</button>`).join("")}</nav>
+      </header>`;
+    if (cfg) this.setAttribute("card", "");
+    r.innerHTML = `<style>${STYLE}</style>${head}
       <main>
         <section class="view" data-view="verlauf">
           <div class="lamps"></div>
           <div class="editor">
-            <div class="stage" aria-label="Lampe"></div>
+            <div class="stage" aria-label="${tr("Lampe")}"></div>
             <div class="panel">
               <div class="card">
-                <h3>Farbe <output class="hex"></output></h3>
-                <div class="picker"><div class="disc" aria-label="Farbe wählen"><div class="knob"></div></div><div class="whites"></div></div>
+                <h3>${tr("Farbe")} <output class="hex"></output></h3>
+                <div class="picker"><div class="disc" aria-label="${tr("Farbe wählen")}"><div class="knob"></div></div><div class="whites"></div></div>
               </div>
-              <div class="card"><h3>Helligkeit <output class="bri"></output></h3><div class="slider bright"><div class="fill"></div><div class="grip"></div></div></div>
-              <div class="card"><h3>Verteilung</h3><div class="segs modes"></div></div>
+              <div class="card"><h3>${tr("Helligkeit")} <output class="bri"></output></h3><div class="slider bright"><div class="fill"></div><div class="grip"></div></div></div>
+              <div class="card"><h3>${tr("Verteilung")}</h3><div class="segs modes"></div></div>
               <div class="actions"></div>
+              <div class="card pair"><h3>${tr("Gekoppelt mit")}</h3><div class="segs partners"></div>
+                <div class="toggle" style="padding-bottom:0">${tr("Gespiegelt (Reihenfolge umgedreht)")}<button class="switch mirror" role="switch" aria-checked="false"></button></div>
+                <div class="pair-note"></div></div>
+              <div class="card fx"><h3>${tr("Effekte")}</h3><div class="segs effects"></div>
+                <div class="durations" style="margin-top:12px"><div class="muted" style="font-size:13px;margin-bottom:8px">${tr("Dauer")}</div><div class="segs dur"></div></div></div>
             </div>
           </div>
         </section>
-        <section class="view" data-view="szenen"><div class="filters"></div><div class="scenes"></div></section>
+        <section class="view" data-view="szenen"><div class="filters" ${cfg?.raum ? 'style="display:none"' : ""}></div><div class="scenes"></div></section>
         <section class="view" data-view="favoriten"><div class="favs"></div></section>
         <section class="view" data-view="einstellungen"><div class="settings"></div></section>
       </main>
@@ -363,7 +441,7 @@ class LedColorPanel extends HTMLElement {
       r.querySelector(".menu").appendChild(this._menu);
     }
 
-    r.querySelector(".tabs").addEventListener("click", (e) => {
+    r.querySelector(".tabs")?.addEventListener("click", (e) => {
       const b = e.target.closest("button[data-tab]");
       if (b) this._setTab(b.dataset.tab);
     });
@@ -376,10 +454,15 @@ class LedColorPanel extends HTMLElement {
     });
     this._bindDisc();
     this._bindSlider(r.querySelector(".slider.bright"), (v) => this._setBrightness(v));
+    r.querySelector(".switch.mirror").addEventListener("click", () => {
+      const p = this._pairOf(this._lamp);
+      if (p) this._setPair(this._lamp, p.partner, !p.mirrored);
+    });
+    if (cfg?.lampenwahl === false) r.querySelector(".lamps").style.display = "none";
     this._subscribe();
     this._loadFavs();
     this._setTab(this._tab);
-    window.addEventListener("resize", () => this._movePill());
+    if (!this._onResize) { this._onResize = () => this._movePill(); window.addEventListener("resize", this._onResize); }
   }
 
   _setTab(tab) {
@@ -402,6 +485,7 @@ class LedColorPanel extends HTMLElement {
     if (!this._hass) return;
     if (this._menu) this._menu.hass = this._hass;
     this._movePill();
+    if (!this._views.includes(this._tab)) this._tab = this._views[0];
     if (this._tab === "verlauf") this._renderEditor();
     if (this._tab === "szenen") this._renderScenes();
     if (this._tab === "favoriten") this._renderFavs();
@@ -436,7 +520,7 @@ class LedColorPanel extends HTMLElement {
   _areaName(entityId) {
     const h = this._hass, e = h.entities?.[entityId];
     const areaId = e?.area_id || (e?.device_id && h.devices?.[e.device_id]?.area_id);
-    return (areaId && h.areas?.[areaId]?.name) || "Ohne Raum";
+    return (areaId && h.areas?.[areaId]?.name) || tr("Ohne Raum");
   }
 
   _subscribe() {
@@ -465,7 +549,7 @@ class LedColorPanel extends HTMLElement {
     const stage = r.querySelector(".stage");
     if (!lamps.length) {
       r.querySelector(".lamps").innerHTML = "";
-      stage.innerHTML = `<div class="hint" style="bottom:45%">Keine Lampe mit Farbverlauf gefunden. Läuft LED Color für Hue?</div>`;
+      stage.innerHTML = `<div class="hint" style="top:45%">${tr("Keine Lampe mit Farbverlauf gefunden. Läuft LED Color für Hue?")}</div>`;
       return;
     }
     if (!this._lamp || !lamps.find((l) => l.id === this._lamp)) this._lamp = lamps[0].id;
@@ -479,14 +563,14 @@ class LedColorPanel extends HTMLElement {
       box.innerHTML = lamps.map((l) => {
         const vertical = l.a.form === "stab";
         const off = !l.a.an || l.a.erreichbar === false;
-        const state = l.a.erreichbar === false ? "ohne Strom" : l.a.an ? `${l.a.helligkeit ?? 0} %` : "aus";
+        const state = l.a.erreichbar === false ? tr("ohne Strom") : l.a.an ? `${l.a.helligkeit ?? 0} %` : tr("aus");
         return `<button class="lamp-chip" data-id="${esc(l.id)}" aria-pressed="${l.id === this._lamp}">
           <i class="${vertical ? "" : "h"} ${off ? "off" : ""}" style="background:${linear(vertical ? "to top" : "to right", displayColors(l.a.farben, l.a.modus))}"></i>
           <span><b>${esc(l.name)}</b><em>${state}</em></span></button>`;
       }).join("");
       box.querySelectorAll(".lamp-chip").forEach((b) => b.addEventListener("click", () => {
         if (this._lamp === b.dataset.id) return;
-        this._lamp = b.dataset.id; this._draft = null; this._editUntil = 0; this._sel = 0; this._shapeSig = null;
+        this._lamp = b.dataset.id; this._draft = null; this._editUntil = 0; this._sel = 0; this._shapeSig = null; this._hist = [];
         this._renderEditor();
       }));
     }
@@ -570,7 +654,7 @@ class LedColorPanel extends HTMLElement {
           <div class="tv" style="left:21%;top:25%;width:58%;height:50%"></div>`;
       }
       stage.innerHTML = html + `<div class="beads"></div>
-        <button class="power" aria-label="Licht ein/aus"><ha-icon icon="mdi:power"></ha-icon></button>
+        <button class="power" aria-label="${tr("Licht ein/aus")}"><ha-icon icon="mdi:power"></ha-icon></button>
         <div class="hint"></div>`;
       stage.querySelector(".power").addEventListener("click", () => {
         const l = this._lamps().find((x) => x.id === this._lamp);
@@ -587,10 +671,10 @@ class LedColorPanel extends HTMLElement {
     power.style.display = lamp.light ? "" : "none";
     power.classList.toggle("on", on);
     const hint = stage.querySelector(".hint");
-    const warn = lamp.a.erreichbar === false ? "Lampe hat keinen Strom" : lamp.a.sync_aktiv ? "Hue Sync steuert gerade diese Lampe" : "";
+    const warn = lamp.a.erreichbar === false ? tr("Lampe hat keinen Strom") : lamp.a.sync_aktiv ? tr("Hue Sync steuert gerade diese Lampe") : "";
     hint.classList.toggle("tip", !warn); // reine Bedienhilfe – auf dem Handy ausgeblendet
     hint.textContent = warn ||
-      (d.points.length > 1 ? "Punkt antippen, um die Farbe zu ändern. Ziehen, um die Reihenfolge zu ändern." : "Punkt antippen, um die Farbe zu ändern.");
+      tr(d.points.length > 1 ? "Punkt antippen, um die Farbe zu ändern. Ziehen, um die Reihenfolge zu ändern." : "Punkt antippen, um die Farbe zu ändern.");
 
     // Perlen (Farbpunkte)
     const beads = stage.querySelector(".beads");
@@ -601,7 +685,7 @@ class LedColorPanel extends HTMLElement {
       if (!el) {
         el = document.createElement("button");
         el.className = "bead";
-        el.setAttribute("aria-label", "Farbpunkt");
+        el.setAttribute("aria-label", tr("Farbpunkt"));
         el.innerHTML = "<span></span>";
         this._bindBead(el, p.id);
         beads.appendChild(el);
@@ -632,6 +716,7 @@ class LedColorPanel extends HTMLElement {
       const dr = this._drag;
       if (!dr || dr.id !== id) return;
       if (!dr.moved && Math.hypot(e.clientX - dr.x, e.clientY - dr.y) < 6) return;
+      if (!dr.moved) this._snap(true);
       dr.moved = true;
       el.classList.add("drag");
       const lamp = this._lamps().find((l) => l.id === this._lamp);
@@ -672,7 +757,7 @@ class LedColorPanel extends HTMLElement {
     knob.style.top = `${50 + Math.sin(rad) * R}%`;
     knob.style.background = p.color;
     disc.dataset.ready = "1";
-    r.querySelector(".hex").textContent = `Punkt ${this._sel + 1}: ${p.color}`;
+    r.querySelector(".hex").textContent = tr("Punkt {n}: {hex}", { n: this._sel + 1, hex: p.color });
     // Helligkeit
     const bri = Math.round(d.helligkeit);
     r.querySelector(".bri").textContent = `${bri} %`;
@@ -686,24 +771,118 @@ class LedColorPanel extends HTMLElement {
     if (ms.dataset.sig !== sig) {
       ms.dataset.sig = sig;
       ms.innerHTML = Object.keys(MODES).filter((m) => modi.includes(m)).map((m) =>
-        `<button data-m="${m}" aria-pressed="${m === d.modus}" ${d.points.length < 2 ? "disabled" : ""}>${MODES[m]}</button>`).join("");
+        `<button data-m="${m}" aria-pressed="${m === d.modus}" ${d.points.length < 2 ? "disabled" : ""}>${modeLabel(m)}</button>`).join("");
       ms.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-        this._draft.modus = b.dataset.m; this._touch(); this._apply(); this._repaint();
+        this._snap(true); this._draft.modus = b.dataset.m; this._touch(); this._apply(); this._repaint();
       }));
     }
     // Aktionen
     const max = lamp.a.punkte_max || 5, n = d.points.length;
-    const acts = r.querySelector(".actions"), asig = `${n}|${max}|${this._lamps().length}`;
+    const acts = r.querySelector(".actions"), asig = `${n}|${max}|${this._lamps().length}|${this._hist.length > 0}`;
     if (acts.dataset.sig !== asig) {
       acts.dataset.sig = asig;
       acts.innerHTML = `
-        <button class="act" data-a="add" ${n >= max ? "disabled" : ""}><ha-icon icon="mdi:plus-circle-outline"></ha-icon>Punkt dazu</button>
-        <button class="act" data-a="del" ${n <= 1 ? "disabled" : ""}><ha-icon icon="mdi:minus-circle-outline"></ha-icon>Punkt weg</button>
-        <button class="act" data-a="rev" ${n < 2 ? "disabled" : ""}><ha-icon icon="mdi:swap-horizontal"></ha-icon>Umdrehen</button>
-        <button class="act" data-a="copy" ${this._lamps().length < 2 ? "disabled" : ""}><ha-icon icon="mdi:content-copy"></ha-icon>Übertragen</button>
-        <button class="act primary" data-a="fav"><ha-icon icon="mdi:heart-outline"></ha-icon>Als Favorit</button>`;
+        <button class="act" data-a="undo" ${this._hist.length ? "" : "disabled"}><ha-icon icon="mdi:undo-variant"></ha-icon>${tr("Zurück")}</button>
+        <button class="act" data-a="add" ${n >= max ? "disabled" : ""}><ha-icon icon="mdi:plus-circle-outline"></ha-icon>${tr("Punkt dazu")}</button>
+        <button class="act" data-a="del" ${n <= 1 ? "disabled" : ""}><ha-icon icon="mdi:minus-circle-outline"></ha-icon>${tr("Punkt weg")}</button>
+        <button class="act" data-a="rev" ${n < 2 ? "disabled" : ""}><ha-icon icon="mdi:swap-horizontal"></ha-icon>${tr("Umdrehen")}</button>
+        <button class="act" data-a="copy" ${this._lamps().length < 2 ? "disabled" : ""}><ha-icon icon="mdi:content-copy"></ha-icon>${tr("Übertragen")}</button>
+        <button class="act primary" data-a="fav"><ha-icon icon="mdi:heart-outline"></ha-icon>${tr("Als Favorit")}</button>`;
       acts.querySelectorAll(".act").forEach((b) => b.addEventListener("click", () => this._action(b.dataset.a)));
     }
+    this._paintPair(lamp);
+    this._paintEffects(lamp);
+  }
+
+  // ---------- Koppeln (z. B. beide Signe): Partner macht jede Änderung mit
+  _pairs() {
+    const p = { ...store.get("paare", {}) };
+    const c = this._cfg;
+    if (c?.lampe && c?.paar) {
+      p[c.lampe] = { partner: c.paar, mirrored: !!c.gespiegelt };
+      p[c.paar] = { partner: c.lampe, mirrored: !!c.gespiegelt };
+    }
+    return p;
+  }
+  _pairOf(id) {
+    const p = this._pairs()[id];
+    return p && this._hass.states[p.partner] ? p : null;
+  }
+  _setPair(id, partner, mirrored) {
+    const all = store.get("paare", {});
+    const old = all[id]?.partner;
+    if (old) delete all[old];
+    delete all[id];
+    if (partner) {
+      if (all[partner]?.partner) delete all[all[partner].partner];
+      all[id] = { partner, mirrored };
+      all[partner] = { partner: id, mirrored };
+    }
+    store.set("paare", all);
+    this._paintPair(this._lamps().find((l) => l.id === this._lamp));
+  }
+  _paintPair(lamp) {
+    const r = this.shadowRoot, box = r.querySelector(".partners");
+    const others = this._lamps().filter((l) => l.id !== lamp.id);
+    r.querySelector(".card.pair").style.display = others.length ? "" : "none";
+    const pair = this._pairOf(lamp.id);
+    const sig = lamp.id + others.map((l) => l.id + l.name).join() + JSON.stringify(pair);
+    if (box.dataset.sig !== sig) {
+      box.dataset.sig = sig;
+      box.innerHTML = [`<button data-p="" aria-pressed="${!pair}">${tr("Keine")}</button>`]
+        .concat(others.map((l) => `<button data-p="${esc(l.id)}" aria-pressed="${pair?.partner === l.id}">${esc(l.name)}</button>`)).join("");
+      box.querySelectorAll("button").forEach((b) => b.addEventListener("click", () =>
+        this._setPair(lamp.id, b.dataset.p || null, this._pairOf(lamp.id)?.mirrored ?? true)));
+    }
+    const sw = r.querySelector(".switch.mirror");
+    sw.setAttribute("aria-checked", String(!!pair?.mirrored));
+    sw.disabled = !pair;
+    sw.parentElement.style.opacity = pair ? "1" : ".4";
+    const partner = pair && this._lamps().find((l) => l.id === pair.partner);
+    r.querySelector(".pair-note").textContent = partner
+      ? tr(pair.mirrored ? "Gekoppelt: {name} macht gespiegelt mit." : "Gekoppelt: {name} macht mit.", { name: partner.name }) : "";
+  }
+
+  // ---------- Effekte (Kerze, Kaminfeuer …) und Sonnenaufgang mit Dauer
+  _paintEffects(lamp) {
+    const r = this.shadowRoot, card = r.querySelector(".card.fx");
+    const fx = lamp.a.effekte || [], timed = lamp.a.zeit_effekte || [];
+    card.style.display = fx.length || timed.length ? "" : "none";
+    const active = lamp.a.effekt || null;
+    const box = r.querySelector(".effects"), sig = [lamp.id, ...fx, "|", ...timed, active].join();
+    if (box.dataset.sig !== sig) {
+      box.dataset.sig = sig;
+      box.innerHTML = [...fx, ...timed].map((e) =>
+        `<button data-fx="${esc(e)}" aria-pressed="${e === active}">${esc(effectLabel(e))}</button>`).join("") +
+        (active ? `<button data-fx="aus">${tr("Effekt aus")}</button>` : "");
+      box.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        const e = b.dataset.fx;
+        const data = { entity_id: lamp.id, effekt: e === active ? "aus" : e };
+        if (timed.includes(e) && e !== active) data.dauer = this._dauer * 60;
+        this._call("hue_plus", "set_effect", data);
+      }));
+    }
+    const dur = r.querySelector(".durations");
+    dur.style.display = timed.length ? "" : "none";
+    const dbox = r.querySelector(".dur"), dsig = String(this._dauer);
+    if (dbox.dataset.sig !== dsig) {
+      dbox.dataset.sig = dsig;
+      dbox.innerHTML = DURATIONS.map((m) => `<button data-d="${m}" aria-pressed="${m === this._dauer}">${tr("{n} Min.", { n: m })}</button>`).join("");
+      dbox.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        this._dauer = Number(b.dataset.d); store.set("dauer", this._dauer);
+        const cur = this._lamps().find((l) => l.id === this._lamp);
+        if (cur) this._paintEffects(cur);
+      }));
+    }
+  }
+
+  // ---------- Rückgängig: Zustand vor einer Änderung merken (schnelle Folgen zählen als eine)
+  _snap(force) {
+    const now = Date.now();
+    if (!this._draft || (!force && now - this._lastSnap < 700)) { this._lastSnap = now; return; }
+    this._lastSnap = now;
+    this._hist.push({ sel: this._sel, d: { ...this._draft, points: this._draft.points.map((p) => ({ ...p })) } });
+    if (this._hist.length > 40) this._hist.shift();
   }
 
   _repaint() {
@@ -716,6 +895,14 @@ class LedColorPanel extends HTMLElement {
 
   _action(a) {
     const d = this._draft, lamp = this._lamps().find((l) => l.id === this._lamp);
+    if (a === "undo") {
+      const last = this._hist.pop();
+      if (!last) return;
+      this._draft = last.d; this._sel = last.sel;
+      this._touch(); this._apply(); this._repaint();
+      return;
+    }
+    if (["add", "del", "rev"].includes(a)) this._snap(true);
     if (a === "add") {
       const i = this._sel, cur = hexToRgb(d.points[i].color);
       // zwischen zwei Punkten: Mischfarbe; am Ende: Farbton ein Stück weiterdrehen
@@ -741,11 +928,11 @@ class LedColorPanel extends HTMLElement {
   _setPointColor(hex) {
     const p = this._draft?.points[this._sel];
     if (!p) return;
-    p.color = hex; this._touch(); this._apply(); this._repaint();
+    this._snap(); p.color = hex; this._touch(); this._apply(); this._repaint();
   }
   _setBrightness(v) {
     if (!this._draft) return;
-    this._draft.helligkeit = clamp(Math.round(v), 1, 100); this._touch(); this._apply(); this._repaint();
+    this._snap(); this._draft.helligkeit = clamp(Math.round(v), 1, 100); this._touch(); this._apply(); this._repaint();
   }
 
   _bindDisc() {
@@ -780,9 +967,21 @@ class LedColorPanel extends HTMLElement {
     this._applyT = setTimeout(() => {
       const d = this._draft;
       if (!d) return;
-      const data = { entity_id: this._lamp, farben: d.points.map((p) => p.color), helligkeit: d.helligkeit, uebergang: 0.4 };
+      const farben = d.points.map((p) => p.color);
+      const data = { entity_id: this._lamp, farben, helligkeit: d.helligkeit, uebergang: 0.4 };
       if (d.points.length > 1) data.modus = d.modus;
       this._call("hue_plus", "set_gradient", data);
+      // gekoppelte Lampe macht mit (auf Wunsch gespiegelt)
+      const pair = this._pairOf(this._lamp);
+      const partner = pair && this._lamps().find((l) => l.id === pair.partner);
+      if (partner) {
+        let f = pair.mirrored ? [...farben].reverse() : [...farben];
+        const max = partner.a.punkte_max || 5;
+        if (f.length > max) f = Array.from({ length: max }, (_, i) => f[Math.round((i * (f.length - 1)) / (max - 1))]);
+        const pd = { entity_id: partner.id, farben: f, helligkeit: d.helligkeit, uebergang: 0.4 };
+        if (f.length > 1 && (!partner.a.modi?.length || partner.a.modi.includes(d.modus))) pd.modus = d.modus;
+        this._call("hue_plus", "set_gradient", pd);
+      }
     }, 250);
   }
 
@@ -818,39 +1017,39 @@ class LedColorPanel extends HTMLElement {
 
   _copySheet(lamp) {
     const sel = [];
-    this._openSheet(`<h3>«${esc(lamp.name)}» übertragen auf</h3>
+    this._openSheet(`<h3>${tr("«{name}» übertragen auf", { name: esc(lamp.name) })}</h3>
       <div class="chips">${this._lampChips(sel, lamp.id)}</div>
-      <div class="toggle">Gespiegelt (Reihenfolge umgedreht)<button class="switch" role="switch" aria-checked="false"></button></div>
-      <div class="bar"><button class="act" data-x="cancel">Abbrechen</button><button class="act primary" data-x="go">Übertragen</button></div>`,
+      <div class="toggle">${tr("Gespiegelt (Reihenfolge umgedreht)")}<button class="switch" role="switch" aria-checked="false"></button></div>
+      <div class="bar"><button class="act" data-x="cancel">${tr("Abbrechen")}</button><button class="act primary" data-x="go">${tr("Übertragen")}</button></div>`,
     (sh) => {
       this._bindChips(sh, sel);
       const mirrored = this._bindSwitch(sh);
       sh.querySelector('[data-x="cancel"]').addEventListener("click", () => this._closeSheet());
       sh.querySelector('[data-x="go"]').addEventListener("click", () => {
-        if (!sel.length) return this._toast("Bitte mindestens eine Lampe wählen.");
+        if (!sel.length) return this._toast(tr("Bitte mindestens eine Lampe wählen."));
         this._call("hue_plus", "copy_gradient", { von: lamp.id, entity_id: sel, gespiegelt: mirrored(), uebergang: 0.6 });
         this._closeSheet();
-        this._toast(`Übertragen auf ${sel.length} ${sel.length === 1 ? "Lampe" : "Lampen"}.`);
+        this._toast(plural(sel.length, "Übertragen auf {n} Lampe.", "Übertragen auf {n} Lampen."));
       });
     });
   }
 
   _favSheet() {
     const d = this._draft, farben = d.points.map((p) => p.color);
-    this._openSheet(`<h3>Als Favorit speichern</h3>
+    this._openSheet(`<h3>${tr("Als Favorit speichern")}</h3>
       <div class="fav"><div class="swatch" style="background:${linear("to right", displayColors(farben, d.modus))};margin-bottom:14px"></div></div>
-      <input type="text" maxlength="40" placeholder="Name, z. B. Sonnenuntergang" aria-label="Name">
-      <div class="bar"><button class="act" data-x="cancel">Abbrechen</button><button class="act primary" data-x="save">Speichern</button></div>`,
+      <input type="text" maxlength="40" placeholder="${tr("Name, z. B. Sonnenuntergang")}" aria-label="Name">
+      <div class="bar"><button class="act" data-x="cancel">${tr("Abbrechen")}</button><button class="act primary" data-x="save">${tr("Speichern")}</button></div>`,
     (sh) => {
       const input = sh.querySelector("input");
       setTimeout(() => input.focus(), 300);
       sh.querySelector('[data-x="cancel"]').addEventListener("click", () => this._closeSheet());
       const save = async () => {
         const name = input.value.trim();
-        if (!name) return this._toast("Bitte einen Namen eingeben.");
+        if (!name) return this._toast(tr("Bitte einen Namen eingeben."));
         try {
           await this._hass.callWS({ type: "hue_plus/favorites/save", name, farben, modus: d.points.length > 1 ? d.modus : "einfarbig" });
-          this._closeSheet(); this._toast(`Gespeichert: ${name}`); this._loadFavs();
+          this._closeSheet(); this._toast(tr("Gespeichert: {name}", { name })); this._loadFavs();
         } catch (e) { this._toast(e?.message || String(e)); }
       };
       sh.querySelector('[data-x="save"]').addEventListener("click", save);
@@ -862,17 +1061,17 @@ class LedColorPanel extends HTMLElement {
   _renderScenes() {
     const r = this.shadowRoot, all = this._scenes;
     const rooms = [...new Set(all.map((s) => s.raum))];
-    if (this._room && !rooms.includes(this._room)) this._room = null;
+    if (this._room && rooms.length && !rooms.includes(this._room) && !this._cfg?.raum) this._room = null;
     const f = r.querySelector(".filters");
     const fsig = rooms.join("|") + this._room;
     if (f.dataset.sig !== fsig) {
       f.dataset.sig = fsig;
-      f.innerHTML = [`<button data-r="" aria-pressed="${!this._room}">Alle</button>`]
+      f.innerHTML = [`<button data-r="" aria-pressed="${!this._room}">${tr("Alle")}</button>`]
         .concat(rooms.map((x) => `<button data-r="${esc(x)}" aria-pressed="${x === this._room}">${esc(x)}</button>`)).join("");
       f.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { this._room = b.dataset.r || null; this._renderScenes(); }));
     }
     const box = r.querySelector(".scenes");
-    if (!all.length) { box.innerHTML = `<div class="empty" style="margin-top:14px">Noch keine Szenen geladen. Sind in der Hue App Szenen angelegt?</div>`; return; }
+    if (!all.length) { box.innerHTML = `<div class="empty" style="margin-top:14px">${tr("Noch keine Szenen geladen. Sind in der Hue App Szenen angelegt?")}</div>`; return; }
     const shown = this._room ? all.filter((s) => s.raum === this._room) : all;
     const groups = {};
     shown.forEach((s) => (groups[s.raum] = groups[s.raum] || []).push(s));
@@ -880,7 +1079,7 @@ class LedColorPanel extends HTMLElement {
     if (box.dataset.sig === sig) return;
     box.dataset.sig = sig;
     box.innerHTML = Object.entries(groups).map(([room, list]) => `
-      <h2>${esc(room)}<span>${list.length} ${list.length === 1 ? "Szene" : "Szenen"}</span></h2>
+      ${this._cfg?.raum ? "" : `<h2>${esc(room)}<span>${plural(list.length, "{n} Szene", "{n} Szenen")}</span></h2>`}
       <div class="grid">${list.map((s) => this._sceneCard(s)).join("")}</div>`).join("");
     box.querySelectorAll(".scene").forEach((card) => {
       card.addEventListener("click", (e) => {
@@ -897,10 +1096,10 @@ class LedColorPanel extends HTMLElement {
     if (!colors.length) colors = ["#1a1a1a"];
     const active = s.status !== "inactive";
     const lit = s.lichter.filter((l) => l.an).length;
-    const state = s.status === "dynamic_palette" ? "Läuft dynamisch" : s.status === "static" ? "Aktiv" : `${lit} ${lit === 1 ? "Lampe" : "Lampen"}`;
+    const state = s.status === "dynamic_palette" ? tr("Läuft dynamisch") : s.status === "static" ? tr("Aktiv") : plural(lit, "{n} Lampe", "{n} Lampen");
     return `<button class="scene ${active ? "active" : ""}" data-id="${esc(s.id)}" style="--glow:${colors[0]}">
       <div class="swatch" style="background:${linear("to right", colors)}"></div>
-      ${s.dynamisch_moeglich ? `<span class="dyn ${s.status === "dynamic_palette" ? "on" : ""}" title="Dynamisch starten"><ha-icon icon="mdi:motion-play-outline"></ha-icon></span>` : ""}
+      ${s.dynamisch_moeglich ? `<span class="dyn ${s.status === "dynamic_palette" ? "on" : ""}" title="${tr("Dynamisch starten")}"><ha-icon icon="mdi:motion-play-outline"></ha-icon></span>` : ""}
       <b>${esc(s.name)}</b><small>${state}</small></button>`;
   }
   async _activate(id, dynamisch) {
@@ -915,14 +1114,14 @@ class LedColorPanel extends HTMLElement {
     if (box.dataset.sig === sig) return;
     box.dataset.sig = sig;
     if (!this._favs.length) {
-      box.innerHTML = `<div class="empty" style="margin-top:14px">Noch keine Favoriten.<br>Stell unter «Verläufe» einen Verlauf zusammen und tippe auf «Als Favorit».</div>`;
+      box.innerHTML = `<div class="empty" style="margin-top:14px">${tr("Noch keine Favoriten.<br>Stell unter «Verläufe» einen Verlauf zusammen und tippe auf «Als Favorit».")}</div>`;
       return;
     }
     const list = [...this._favs].sort((a, b) => (b.erstellt || 0) - (a.erstellt || 0));
-    box.innerHTML = `<h2>Deine Verläufe<span>${list.length}</span></h2><div class="grid">${list.map((f) => `
+    box.innerHTML = `<h2>${tr("Deine Verläufe")}<span>${list.length}</span></h2><div class="grid">${list.map((f) => `
       <button class="scene fav" data-id="${esc(f.id)}">
         <div class="swatch" style="background:${linear("to right", displayColors(f.farben, f.modus))}"></div>
-        <b>${esc(f.name)}</b><small>${f.farben.length} ${f.farben.length === 1 ? "Farbe" : "Farben"}, ${(MODES[f.modus] || "einfarbig").toLowerCase()}</small>
+        <b>${esc(f.name)}</b><small>${plural(f.farben.length, "{n} Farbe", "{n} Farben")}, ${modeLabel(f.modus).toLowerCase()}</small>
       </button>`).join("")}</div>`;
     box.querySelectorAll(".fav").forEach((b) => b.addEventListener("click", () => this._favApplySheet(this._favs.find((f) => f.id === b.dataset.id))));
   }
@@ -931,19 +1130,19 @@ class LedColorPanel extends HTMLElement {
     const sel = this._lamp ? [this._lamp] : [];
     this._openSheet(`<h3>${esc(fav.name)}</h3>
       <div class="fav"><div class="swatch" style="background:${linear("to right", displayColors(fav.farben, fav.modus))};margin-bottom:14px"></div></div>
-      <div class="muted" style="font-size:14px;margin-bottom:8px">Auf welche Lampen?</div>
+      <div class="muted" style="font-size:14px;margin-bottom:8px">${tr("Auf welche Lampen?")}</div>
       <div class="chips">${this._lampChips(sel)}</div>
-      <div class="toggle">Gespiegelt (Reihenfolge umgedreht)<button class="switch" role="switch" aria-checked="false"></button></div>
-      <div class="bar"><button class="act" data-x="del"><ha-icon icon="mdi:trash-can-outline"></ha-icon>Löschen</button><button class="act primary" data-x="go">Anwenden</button></div>`,
+      <div class="toggle">${tr("Gespiegelt (Reihenfolge umgedreht)")}<button class="switch" role="switch" aria-checked="false"></button></div>
+      <div class="bar"><button class="act" data-x="del"><ha-icon icon="mdi:trash-can-outline"></ha-icon>${tr("Löschen")}</button><button class="act primary" data-x="go">${tr("Anwenden")}</button></div>`,
     (sh) => {
       this._bindChips(sh, sel);
       const mirrored = this._bindSwitch(sh);
       sh.querySelector('[data-x="del"]').addEventListener("click", async () => {
         try { await this._hass.callWS({ type: "hue_plus/favorites/delete", fav_id: fav.id }); } catch (e) { return this._toast(String(e?.message || e)); }
-        this._closeSheet(); this._toast(`Gelöscht: ${fav.name}`); this._loadFavs();
+        this._closeSheet(); this._toast(tr("Gelöscht: {name}", { name: fav.name })); this._loadFavs();
       });
       sh.querySelector('[data-x="go"]').addEventListener("click", () => {
-        if (!sel.length) return this._toast("Bitte mindestens eine Lampe wählen.");
+        if (!sel.length) return this._toast(tr("Bitte mindestens eine Lampe wählen."));
         const lamps = this._lamps();
         sel.forEach((id) => {
           const l = lamps.find((x) => x.id === id);
@@ -956,7 +1155,7 @@ class LedColorPanel extends HTMLElement {
         });
         this._editUntil = 0;
         this._closeSheet();
-        this._toast(`«${fav.name}» angewendet.`);
+        this._toast(tr("«{name}» angewendet.", { name: fav.name }));
       });
     });
   }
@@ -966,7 +1165,7 @@ class LedColorPanel extends HTMLElement {
     const h = this._hass, box = this.shadowRoot.querySelector(".settings");
     const ents = Object.values(h.entities || {}).filter((e) => e.platform === "hue_plus" && h.states[e.entity_id]);
     const rows = ents.filter((e) => e.entity_id.startsWith("select.") || e.entity_id.startsWith("number."));
-    if (!rows.length) { box.innerHTML = `<div class="empty" style="margin-top:14px">Keine Einstellungen gefunden.</div>`; return; }
+    if (!rows.length) { box.innerHTML = `<div class="empty" style="margin-top:14px">${tr("Keine Einstellungen gefunden.")}</div>`; return; }
     if (this._busySliders.size) return; // nicht neu zeichnen, während ein Regler gezogen wird
     const byRoom = {};
     rows.forEach((e) => (byRoom[this._areaName(e.entity_id)] = byRoom[this._areaName(e.entity_id)] || []).push(e));
@@ -976,22 +1175,23 @@ class LedColorPanel extends HTMLElement {
     const label = (e) => {
       const dev = this._deviceName(e.entity_id);
       const fn = String(h.states[e.entity_id].attributes.friendly_name || e.entity_id);
-      return dev || fn.replace(/ (Einschaltverhalten|Empfindlichkeit)$/, "");
+      return dev || fn.replace(/ (Einschaltverhalten|Empfindlichkeit|Power-on behavior|Sensitivity)$/, "");
     };
-    const rooms = Object.keys(byRoom).sort((a, b) => (a === "Ohne Raum") - (b === "Ohne Raum") || a.localeCompare(b, "de"));
-    box.innerHTML = `<p class="muted" style="margin:6px 0 18px;font-size:14px;max-width:60ch">Einschaltverhalten: was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter. Empfindlichkeit: wie leicht Bewegungsmelder und MotionAware auslösen.</p>` +
+    const none = tr("Ohne Raum");
+    const rooms = Object.keys(byRoom).sort((a, b) => (a === none) - (b === none) || a.localeCompare(b, "de"));
+    box.innerHTML = `<p class="muted" style="margin:6px 0 18px;font-size:14px;max-width:60ch">${tr("Einschaltverhalten: was eine Lampe macht, wenn der Strom zurückkommt, zum Beispiel nach dem Wandschalter. Empfindlichkeit: wie leicht Bewegungsmelder und MotionAware auslösen.")}</p>` +
       rooms.map((room) => `<div class="room"><h2>${esc(room)}</h2>${byRoom[room]
         .sort((a, b) => label(a).localeCompare(label(b), "de") || a.entity_id.localeCompare(b.entity_id))
         .map((e) => {
           const st = h.states[e.entity_id];
           if (e.entity_id.startsWith("select.")) {
-            return `<div class="row"><div class="name">${esc(label(e))}<small>Einschaltverhalten</small></div>
-              <div class="segs" data-e="${esc(e.entity_id)}">${POWERUP.map(([v, t]) => `<button data-v="${v}" aria-pressed="${st.state === v}">${t}</button>`).join("")}
-              ${st.state === "custom" ? `<button disabled aria-pressed="true">Eigene (Hue App)</button>` : ""}</div></div>`;
+            return `<div class="row"><div class="name">${esc(label(e))}<small>${tr("Einschaltverhalten")}</small></div>
+              <div class="segs" data-e="${esc(e.entity_id)}">${POWERUP.map(([v, txt]) => `<button data-v="${v}" aria-pressed="${st.state === v}">${tr(txt)}</button>`).join("")}
+              ${st.state === "custom" ? `<button disabled aria-pressed="true">${tr("Eigene (Hue App)")}</button>` : ""}</div></div>`;
           }
           const min = Number(st.attributes.min ?? 0), max = Number(st.attributes.max ?? 4), val = Number(st.state);
           const pct = isFinite(val) ? ((val - min) / (max - min || 1)) * 100 : 0;
-          const what = e.translation_key === "motionaware_empfindlichkeit" ? "MotionAware Empfindlichkeit" : "Empfindlichkeit";
+          const what = tr(e.translation_key === "motionaware_empfindlichkeit" ? "MotionAware Empfindlichkeit" : "Empfindlichkeit");
           return `<div class="row"><div class="name">${esc(label(e))}<small>${what}</small></div>
             <div class="sens" data-e="${esc(e.entity_id)}" data-min="${min}" data-max="${max}">
               <div class="slider"><div class="fill" style="width:${pct}%;background:var(--accent)"></div><div class="grip" style="left:${pct}%"></div></div>
@@ -1022,5 +1222,31 @@ class LedColorPanel extends HTMLElement {
   }
 }
 
+// ------------------------------------------------------------------ Karte
+// type: custom:led-color-card
+//   ansicht: verlauf | szenen | favoriten | einstellungen   (Start-Bereich)
+//   ansichten: [verlauf, szenen]   oder   tabs: true        (mehrere Bereiche mit Reitern)
+//   lampe: sensor.hue_plus_…_verlauf   lampenwahl: false     (feste Lampe, Auswahl ausblenden)
+//   paar: sensor.hue_plus_…_verlauf    gespiegelt: true      (zweite Lampe macht mit)
+//   raum: Wohnzimmer                                         (nur Szenen dieses Raums)
+//   titel: "Licht Wohnzimmer"
+class LedColorCard extends LedColorPanel {
+  setConfig(config) {
+    this._cfg = { ...(config || {}) };
+    if (this._hass) { // Änderung im Karten-Editor: neu aufbauen
+      this._shapeSig = this._chipSig = null; this._draft = null; this._hist = [];
+      this._init();
+    }
+  }
+  getCardSize() { return this._cfg?.ansicht === "szenen" ? 4 : 9; }
+  getGridOptions() { return { columns: "full", min_columns: 6 }; }
+  static getStubConfig() { return { ansicht: "verlauf" }; }
+}
+
 if (!customElements.get("led-color-panel")) customElements.define("led-color-panel", LedColorPanel);
+if (!customElements.get("led-color-card")) {
+  customElements.define("led-color-card", LedColorCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({ type: "led-color-card", name: "LED Color", description: "Farbverläufe, Szenen und Favoriten für Hue (LED Color für Hue)", preview: false });
+}
 console.info(`%c LED Color für Hue %c ${VERSION} `, "background:#e9c48a;color:#000;border-radius:4px 0 0 4px;padding:2px 4px", "background:#222;color:#e9c48a;border-radius:0 4px 4px 0;padding:2px 4px");

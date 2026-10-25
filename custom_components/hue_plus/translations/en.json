@@ -81,6 +81,9 @@
     },
     "powerup_custom": {
       "message": "«Custom» can only be configured in the Hue app."
+    },
+    "effect_not_supported": {
+      "message": "{name} does not support effect «{effect}»."
     }
   },
   "selector": {
@@ -135,6 +138,24 @@
         "uebergang": {
           "name": "Transition",
           "description": "Duration in seconds."
+        }
+      }
+    },
+    "set_effect": {
+      "name": "Start effect",
+      "description": "Starts an effect like candle, fire, sparkle or a timed effect like sunrise. «off» stops it.",
+      "fields": {
+        "effekt": {
+          "name": "Effect",
+          "description": "e.g. candle, fire, sparkle, prism, opal, glisten, underwater, cosmos, sunbeam, enchant, sunrise, sunset or off"
+        },
+        "dauer": {
+          "name": "Duration",
+          "description": "Sunrise/sunset only: duration in seconds."
+        },
+        "tempo": {
+          "name": "Speed",
+          "description": "0 = slow, 1 = fast (not every light supports it)."
         }
       }
     }

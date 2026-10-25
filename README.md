@@ -1,6 +1,6 @@
 <p align="center"><img src="custom_components/hue_plus/brand/dark_icon@2x.png" width="140" alt="LED Color für Hue"></p>
 
-# LED Color für Hue 0.3.0
+# LED Color für Hue 0.4.0
 
 **Inoffizielle** Erweiterung für Home Assistant, die die offizielle Philips-Hue-Integration ergänzt.
 Kein Produkt von Signify/Philips. «Philips» und «Hue» sind Marken von Signify.
@@ -24,6 +24,13 @@ Nach der Einrichtung erscheint in der Seitenleiste von Home Assistant **LED Colo
 - **Favoriten** – eigene Verläufe speichern und mit einem Tipp auf beliebige Lampen legen. Gespeichert in
   Home Assistant, also auf allen Geräten gleich.
 - **Einstellungen** – Einschaltverhalten und Empfindlichkeit aller Geräte auf einer Seite, nach Raum.
+- **Koppeln** – zwei Lampen (z. B. beide Signe) bewegen sich gemeinsam, auf Wunsch gespiegelt.
+- **Effekte** – Kerze, Kaminfeuer, Funkeln …, Sonnenaufgang/-untergang mit wählbarer Dauer.
+- **Zurück** – letzte Änderungen rückgängig machen.
+- Deutsch und Englisch (folgt der Sprache von Home Assistant).
+
+Dasselbe gibt es als Karte fürs Dashboard: `type: custom:led-color-card` – Einstellungen siehe
+[ANLEITUNG.md](ANLEITUNG.md).
 
 ## Was drin ist
 
@@ -33,6 +40,7 @@ Nach der Einrichtung erscheint in der Seitenleiste von Home Assistant **LED Colo
 | Empfindlichkeit Bewegungsmelder / MotionAware | `number.hue_plus_…_empfindlichkeit` | |
 | Einschaltverhalten nach Stromausfall | `select.hue_plus_<lampe>_einschaltverhalten` | |
 | Farbverlauf setzen | `hue_plus.set_gradient` | siehe unten |
+| Effekt starten | `hue_plus.set_effect` | `effekt: sunrise`, `dauer: 1200` |
 | Farbverlauf kopieren | `hue_plus.copy_gradient` | siehe unten |
 
 ### Verlauf-Sensor – Attribute (stabil, für Dashboards)
@@ -49,6 +57,8 @@ Nach der Einrichtung erscheint in der Seitenleiste von Home Assistant **LED Colo
 | `punkte_max`, `pixel`, `modi`, `licht_id` | technische Zusatzinfos |
 
 Die Farben sind «volle Leuchtkraft», die Helligkeit steht separat.
+Der Zustand des Sensors ist die Anzahl Farben (z. B. «3 Farben»); die Farben stehen nur im Attribut
+und werden nicht in der Datenbank gespeichert. Weitere Attribute: `effekte`, `zeit_effekte`, `form`.
 
 ### Einschaltverhalten
 

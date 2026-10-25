@@ -25,6 +25,9 @@
     },
     "copy_gradient": {
       "service": "mdi:content-copy"
+    },
+    "set_effect": {
+      "service": "mdi:candle"
     }
   }
 }

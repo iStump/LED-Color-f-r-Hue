@@ -14,6 +14,7 @@ from .colors import light_colors
 from .const import (
     ATTR_AN,
     ATTR_EFFEKT,
+    ATTR_EFFEKTE,
     ATTR_ERREICHBAR,
     ATTR_FARBEN,
     ATTR_FORM,
@@ -24,6 +25,7 @@ from .const import (
     ATTR_PIXEL,
     ATTR_PUNKTE_MAX,
     ATTR_SYNC,
+    ATTR_ZEIT_EFFEKTE,
 )
 from .entity import HuePlusEntity
 
@@ -85,7 +87,18 @@ class HueGradientSensor(HuePlusEntity, SensorEntity):
 
     _attr_translation_key = "verlauf"
     _unrecorded_attributes = frozenset(
-        {ATTR_MODI, ATTR_PUNKTE_MAX, ATTR_PIXEL, ATTR_LICHT_ID, ATTR_FORM}
+        {
+            # Diese Werte braucht nur die Oberfläche, nicht die Datenbank.
+            # So wächst die Datenbank bei Farbwechseln kaum.
+            ATTR_FARBEN,
+            ATTR_MODI,
+            ATTR_PUNKTE_MAX,
+            ATTR_PIXEL,
+            ATTR_LICHT_ID,
+            ATTR_FORM,
+            ATTR_EFFEKTE,
+            ATTR_ZEIT_EFFEKTE,
+        }
     )
 
     def __init__(
@@ -144,11 +157,15 @@ class HueGradientSensor(HuePlusEntity, SensorEntity):
         name = self.client.name_of(self.resource) or "Hue Lampe"
         self._attr_name = f"{name} Verlauf"
 
+    # Zustand = Anzahl Farben (z. B. «3 Farben»). Die Farben selbst stehen im Attribut
+    # «farben». So erscheint nicht jeder Farbwechsel im Logbuch.
+    _attr_native_unit_of_measurement = "Farben"
+
     @property
-    def native_value(self) -> str | None:
-        """Farben als kurzer Text."""
+    def native_value(self) -> int | None:
+        """Anzahl Farbpunkte."""
         colors, _ = light_colors(self.resource)
-        return ", ".join(colors)[:255] if colors else None
+        return len(colors) if colors else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -178,7 +195,23 @@ class HueGradientSensor(HuePlusEntity, SensorEntity):
             ATTR_MODI: gradient.get("mode_values", []),
             ATTR_LICHT_ID: self.rid,
             ATTR_FORM: self._form(),
+            ATTR_EFFEKTE: self._effects(("effects_v2", "effects")),
+            ATTR_ZEIT_EFFEKTE: self._effects(("timed_effects",)),
         }
+
+    def _effects(self, keys: tuple[str, ...]) -> list[str]:
+        """Effekte, die diese Lampe kann (ohne «no_effect»)."""
+        found: list[str] = []
+        for key in keys:
+            feature = self.resource.get(key) or {}
+            values = (
+                (feature.get("action") or {}).get("effect_values")
+                or feature.get("effect_values")
+                or feature.get("status_values")
+                or []
+            )
+            found += [v for v in values if v != "no_effect" and v not in found]
+        return found
 
     def _form(self) -> str:
         """Ungefähre Form der Lampe (für Zeichnungen in Dashboards und der Seite)."""

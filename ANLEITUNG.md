@@ -1,67 +1,105 @@
-# LED Color für Hue 0.3.0 – Update, Test, GitHub
+# LED Color für Hue – Anleitung
 
-## A. Update über HACS (1 Minute)
+## Installieren (einmalig)
 
-1. HACS öffnen → «LED Color für Hue» → *Aktualisieren* (oder ⋮ → *Erneut herunterladen*).
-2. Home Assistant neu starten.
-3. Seite einmal neu laden (⌘R bzw. in der App nach unten ziehen). In der Seitenleiste erscheint **LED Color**.
+1. HACS → ⋮ oben rechts → *Benutzerdefinierte Repositories*
+   → `https://github.com/iStump/LED-Color-f-r-Hue`, Typ *Integration* → *Hinzufügen*.
+2. In HACS «LED Color für Hue» suchen → *Herunterladen* → Home Assistant neu starten.
+3. Einstellungen → Geräte & Dienste → *Integration hinzufügen* → «LED Color für Hue».
+   Die Adresse der Bridge ist vorausgefüllt → *Senden* → Knopf auf der Bridge drücken → *Senden*.
 
-Ohne HACS: Ordner `custom_components/hue_plus` durch den neuen ersetzen (siehe Terminal-Befehl im Chat).
+Voraussetzung: eckige Hue Bridge (V2) oder Bridge Pro, offizielle Hue-Integration installiert.
 
-## B. Testen
+## Updates
 
-0. **Seite «LED Color»** in der Seitenleiste öffnen:
-   - Verläufe: Signe wählen, einen Farbpunkt antippen, in der Farbscheibe eine Farbe wählen → die Lampe ändert sich.
-     Einen Punkt mit dem Finger nach oben ziehen → Reihenfolge ändert sich.
-   - Szenen: eine Szene antippen → sie geht an und leuchtet in der Liste.
-   - Favoriten: unter Verläufe «Als Favorit» speichern, dann unter Favoriten auf die andere Signe legen.
-   - Einstellungen: Einschaltverhalten einer Lampe umstellen, in der Hue App kontrollieren.
+HACS zeigt neue Versionen von selbst an: «LED Color für Hue» → *Aktualisieren* → Home Assistant
+neu starten → Seite einmal neu laden. Nichts löschen, nichts neu einrichten.
 
-1. **Name:** Geräte & Dienste → die Integration heisst jetzt «LED Color für Hue».
-2. **Erreichbar:** Entwicklerwerkzeuge → Zustände → `verlauf` → Attribut `erreichbar: true`.
-   Test: eine Signe am Stecker ziehen → nach einigen Minuten `erreichbar: false` (so lange braucht die Bridge, bis sie es merkt). Wieder einstecken.
-3. **Einschaltverhalten:** Gerät der Lampe (z. B. «Wohnzimmer Signe L») → Bereich *Konfiguration* →
-   «Einschaltverhalten» → «Wie vor dem Stromausfall».
-   In der Hue App bei derselben Lampe unter den Einstellungen kontrollieren.
-4. **Verlauf kopieren:** Entwicklerwerkzeuge → Aktionen → YAML-Modus:
-   ```yaml
-   action: hue_plus.copy_gradient
-   target:
-     entity_id: sensor.hue_plus_wohnzimmer_signe_r_verlauf
-   data:
-     von: sensor.hue_plus_wohnzimmer_signe_l_verlauf
-     gespiegelt: true
-   ```
-   → Signe R zeigt die Farben der Signe L in umgekehrter Reihenfolge.
+## Die Seite «LED Color» (Seitenleiste)
 
-Bei Fehlern: Einstellungen → System → Protokolle → «hue_plus» → Screenshot an Claude.
-Diagnose: Geräte & Dienste → LED Color für Hue → ⋮ → *Diagnose herunterladen* (ohne Schlüssel).
+- **Verläufe:** Lampe oben wählen. Farbpunkt antippen → Farbe in der Scheibe oder Weisston wählen.
+  Punkt ziehen → Reihenfolge ändern. Dazu Helligkeit, Verteilung, *Zurück*, *Punkt dazu/weg*,
+  *Umdrehen*, *Übertragen*, *Als Favorit*.
+- **Gekoppelt mit:** zweite Lampe wählen (z. B. Signe R zur Signe L) – sie macht jede Änderung mit,
+  auf Wunsch gespiegelt. Die Kopplung merkt sich jedes Gerät (iPad, iPhone) selbst.
+- **Effekte:** Kerze, Kaminfeuer, Funkeln … antippen. Sonnenaufgang/-untergang mit wählbarer Dauer.
+  Nochmals antippen oder «Effekt aus» beendet den Effekt.
+- **Szenen:** alle Hue-Szenen mit echten Farben. Antippen = einschalten, kleines Symbol = dynamisch.
+- **Favoriten:** gespeicherte Verläufe (in Home Assistant, auf allen Geräten gleich) auf Lampen legen.
+- **Einstellungen:** Einschaltverhalten und Empfindlichkeit aller Geräte nach Raum.
 
-## C. GitHub (einmalig, damit Updates künftig über HACS kommen)
+Die Seite ist deutsch; ist Home Assistant auf einer anderen Sprache eingestellt, erscheint sie englisch.
 
-HACS kann nur **öffentliche** Repositories installieren. Im Code steht nichts Geheimes – aber
-alle können ihn sehen (und deinen GitHub-Namen).
+## Als Karte im Dashboard (z. B. Pop-up am Tablet)
 
-1. Auf github.com ein Konto anlegen (falls noch keins) und **GitHub Desktop** für den Mac laden
-   (desktop.github.com) – damit geht alles per Maus.
-2. github.com → oben rechts **+** → *New repository* → Name `led-color-for-hue`, **Public**, nichts ankreuzen →
-   *Create repository*.
-3. Auf der neuen Seite *uploading an existing file* anklicken und den **Inhalt** des ZIP-Ordners
-   hineinziehen (`custom_components`, `hacs.json`, `README.md`, `LICENSE`, `ANLEITUNG.md`) →
-   *Commit changes*. (Klappt das Ziehen von Ordnern in Safari nicht: mit GitHub Desktop
-   *Clone* → Dateien in den Ordner kopieren → *Commit* → *Push*.)
-   Der versteckte Ordner `.github` (automatische Prüfung) kann später dazukommen.
-4. Rechts *Releases* → *Create a new release* → Tag `v0.2.2` → *Publish release*.
-5. **Claude Bescheid geben:** deinen GitHub-Namen + `led-color-for-hue`. Ich trage dann die Adressen in
-   `manifest.json` ein (die HACS verlangt) – und schicke dir die Version 0.2.2.
-6. In Home Assistant: HACS → ⋮ → *Benutzerdefinierte Repositories* → `https://github.com/iStump/LED-Color-f-r-Hue`,
-   Typ *Integration* → *Hinzufügen* → «LED Color für Hue» → *Herunterladen* → HA neu starten.
-   HACS überschreibt den Ordner `hue_plus` – nichts löschen, nichts neu einrichten.
+Karte hinzufügen → *Manuell* → zum Beispiel:
 
-Tipp: Verbindest du GitHub in den claude.ai-Einstellungen (Connectors), kann Claude neue Versionen
-direkt hochladen – du klickst dann in HACS nur noch auf *Aktualisieren*.
+```yaml
+type: custom:led-color-card
+ansicht: verlauf
+lampe: sensor.hue_plus_wohnzimmer_signe_l_verlauf
+paar: sensor.hue_plus_wohnzimmer_signe_r_verlauf
+gespiegelt: true
+lampenwahl: false
+titel: Signe Wohnzimmer
+```
 
-## D. Entfernen
+```yaml
+type: custom:led-color-card
+ansicht: szenen
+raum: Wohnzimmer
+```
 
-Geräte & Dienste → LED Color für Hue → ⋮ → *Löschen*, Ordner `custom_components/hue_plus` löschen, neu starten.
+| Einstellung | Bedeutung |
+|---|---|
+| `ansicht` | `verlauf`, `szenen`, `favoriten` oder `einstellungen` |
+| `ansichten` | mehrere Bereiche mit Reitern, z. B. `[verlauf, szenen]` (oder `tabs: true` für alle) |
+| `lampe` | Lampe, die beim Öffnen gewählt ist |
+| `lampenwahl: false` | Lampen-Auswahl ausblenden |
+| `paar` + `gespiegelt` | zweite Lampe macht mit (gilt nur für diese Karte) |
+| `raum` | nur die Szenen dieses Raums |
+| `titel` | Überschrift der Karte |
+
+Die Karte muss nicht als Ressource eingetragen werden – LED Color für Hue lädt sie selbst.
+
+## Sensoren für eigene Dashboards
+
+`sensor.hue_plus_<lampe>_verlauf` – Zustand: Anzahl Farben (z. B. «3 Farben»).
+Attribute: `farben` (Hex-Liste), `modus`, `helligkeit` (%), `an`, `erreichbar`, `sync_aktiv`, `effekt`,
+`effekte`, `zeit_effekte`, `form`.
+
+Die Farben werden bewusst nicht in der Datenbank gespeichert (sie liegen nur live vor). So bleibt
+die Datenbank klein und das Logbuch ruhig.
+
+## Aktionen (für Automationen)
+
+```yaml
+action: hue_plus.set_gradient
+target: { entity_id: light.wohnzimmer_signe_l }
+data: { farben: ["#2f63ff", "#16b8f0", "#ff8a00"], helligkeit: 80, uebergang: 1 }
+```
+
+```yaml
+action: hue_plus.copy_gradient
+target: { entity_id: light.wohnzimmer_signe_r }
+data: { von: light.wohnzimmer_signe_l, gespiegelt: true }
+```
+
+```yaml
+action: hue_plus.set_effect
+target: { entity_id: light.schlafzimmer_centris }
+data: { effekt: sunrise, dauer: 1200 }   # Sonnenaufgang über 20 Minuten
+```
+
+Effekte: `candle`, `fire`, `prism`, `sparkle`, `opal`, `glisten`, `underwater`, `cosmos`, `sunbeam`,
+`enchant`, Zeit-Effekte `sunrise`, `sunset`, beenden mit `aus` (nicht jede Lampe kann alle).
+
+## Wenn etwas nicht klappt
+
+- Protokoll: Einstellungen → System → Protokolle → Suche «hue_plus» → Screenshot an Claude.
+- Diagnose: Geräte & Dienste → LED Color für Hue → ⋮ → *Diagnose herunterladen* (enthält keinen Schlüssel).
+
+## Entfernen
+
+Geräte & Dienste → LED Color für Hue → ⋮ → *Löschen*, dann in HACS entfernen und neu starten.
 In der Hue App unter *Einstellungen → Apps* «hue_plus» entfernen.

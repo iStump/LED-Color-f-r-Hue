@@ -29,6 +29,9 @@ ATTR_MODI: Final = "modi"
 ATTR_LICHT_ID: Final = "licht_id"
 # Form der Lampe für Zeichnungen: stab (Signe), tv (Play Gradient am TV), streifen
 ATTR_FORM: Final = "form"
+# Verfügbare Effekte (Kerze, Feuer …) und Zeit-Effekte (Sonnenaufgang …)
+ATTR_EFFEKTE: Final = "effekte"
+ATTR_ZEIT_EFFEKTE: Final = "zeit_effekte"
 
 MODUS_EINFARBIG: Final = "einfarbig"
 
@@ -41,3 +44,4 @@ GRADIENT_MODES: Final = (
 
 SERVICE_SET_GRADIENT: Final = "set_gradient"
 SERVICE_COPY_GRADIENT: Final = "copy_gradient"
+SERVICE_SET_EFFECT: Final = "set_effect"
