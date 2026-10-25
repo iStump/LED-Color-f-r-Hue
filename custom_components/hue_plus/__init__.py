@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
@@ -19,10 +19,13 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .api import HueAuthError, HueClient, HueError
 from .const import CONF_APP_KEY, DOMAIN
+from .panel import async_register_panel, async_unregister_panel
 from .services import async_setup_services
+from .websocket import async_setup_websocket
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,8 +37,9 @@ type HuePlusConfigEntry = ConfigEntry[HueClient]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Aktion hue_plus.set_gradient anmelden."""
+    """Aktionen und die Befehle für die Seite «LED Color» anmelden."""
     async_setup_services(hass)
+    async_setup_websocket(hass)
     return True
 
 
@@ -64,6 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HuePlusConfigEntry) -> b
     entry.runtime_data = client
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _remove_empty_hub_device(hass, entry)
+    await async_register_panel(hass, await _version(hass))
 
     client.start(
         lambda coro, name: entry.async_create_background_task(hass, coro, name),
@@ -71,6 +76,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HuePlusConfigEntry) -> b
     )
     entry.async_on_unload(client.stop)
     return True
+
+
+async def _version(hass: HomeAssistant) -> str:
+    """Versionsnummer aus manifest.json (für das Neuladen der Seite nach Updates)."""
+    integration = await async_get_integration(hass, DOMAIN)
+    return str(integration.version or "0")
 
 
 def _remove_empty_hub_device(hass: HomeAssistant, entry: HuePlusConfigEntry) -> None:
@@ -86,4 +97,12 @@ def _remove_empty_hub_device(hass: HomeAssistant, entry: HuePlusConfigEntry) -> 
 
 async def async_unload_entry(hass: HomeAssistant, entry: HuePlusConfigEntry) -> bool:
     """LED Color entladen."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    others = [
+        e
+        for e in hass.config_entries.async_entries(DOMAIN)
+        if e.entry_id != entry.entry_id and e.state is ConfigEntryState.LOADED
+    ]
+    if unloaded and not others:
+        async_unregister_panel(hass)
+    return unloaded

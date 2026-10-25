@@ -27,6 +27,8 @@ ATTR_PUNKTE_MAX: Final = "punkte_max"
 ATTR_PIXEL: Final = "pixel"
 ATTR_MODI: Final = "modi"
 ATTR_LICHT_ID: Final = "licht_id"
+# Form der Lampe für Zeichnungen: stab (Signe), tv (Play Gradient am TV), streifen
+ATTR_FORM: Final = "form"
 
 MODUS_EINFARBIG: Final = "einfarbig"
 

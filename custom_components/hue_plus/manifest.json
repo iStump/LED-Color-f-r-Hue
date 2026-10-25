@@ -8,11 +8,15 @@
     "@iStump"
   ],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": [
+    "http",
+    "panel_custom",
+    "websocket_api"
+  ],
   "documentation": "https://github.com/iStump/LED-Color-f-r-Hue",
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/iStump/LED-Color-f-r-Hue/issues",
   "requirements": [],
-  "version": "0.2.2"
+  "version": "0.3.0"
 }

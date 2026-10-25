@@ -1,6 +1,6 @@
 <p align="center"><img src="custom_components/hue_plus/brand/dark_icon@2x.png" width="140" alt="LED Color für Hue"></p>
 
-# LED Color für Hue 0.2.2
+# LED Color für Hue 0.3.0
 
 **Inoffizielle** Erweiterung für Home Assistant, die die offizielle Philips-Hue-Integration ergänzt.
 Kein Produkt von Signify/Philips. «Philips» und «Hue» sind Marken von Signify.
@@ -12,6 +12,18 @@ Raum (neben dem offiziellen MotionAware-Schalter). Nur wenn ein Gerät fehlt, la
 beim Sammel-Gerät «LED Color».
 Der technische Name ist `hue_plus` (Ordner, Aktionen, Entitäts-IDs). So bleiben bestehende
 Dashboards und Automationen beim Umbenennen heil.
+
+## Die Seite «LED Color»
+
+Nach der Einrichtung erscheint in der Seitenleiste von Home Assistant **LED Color**:
+
+- **Verläufe** – Lampe wählen, Farbpunkte antippen und Farbe wählen, Punkte ziehen, um die Reihenfolge zu ändern,
+  Helligkeit und Verteilung einstellen. Die Lampe ändert sich sofort. Übertragen auf andere Lampen (auch gespiegelt).
+- **Szenen** – alle Hue-Szenen mit ihren echten Farben, nach Raum. Antippen schaltet ein, das kleine Symbol startet
+  die Szene dynamisch. Die aktive Szene leuchtet.
+- **Favoriten** – eigene Verläufe speichern und mit einem Tipp auf beliebige Lampen legen. Gespeichert in
+  Home Assistant, also auf allen Geräten gleich.
+- **Einstellungen** – Einschaltverhalten und Empfindlichkeit aller Geräte auf einer Seite, nach Raum.
 
 ## Was drin ist
 

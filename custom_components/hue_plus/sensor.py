@@ -16,6 +16,7 @@ from .const import (
     ATTR_EFFEKT,
     ATTR_ERREICHBAR,
     ATTR_FARBEN,
+    ATTR_FORM,
     ATTR_HELLIGKEIT,
     ATTR_LICHT_ID,
     ATTR_MODI,
@@ -84,7 +85,7 @@ class HueGradientSensor(HuePlusEntity, SensorEntity):
 
     _attr_translation_key = "verlauf"
     _unrecorded_attributes = frozenset(
-        {ATTR_MODI, ATTR_PUNKTE_MAX, ATTR_PIXEL, ATTR_LICHT_ID}
+        {ATTR_MODI, ATTR_PUNKTE_MAX, ATTR_PIXEL, ATTR_LICHT_ID, ATTR_FORM}
     )
 
     def __init__(
@@ -176,4 +177,18 @@ class HueGradientSensor(HuePlusEntity, SensorEntity):
             ATTR_PIXEL: gradient.get("pixel_count"),
             ATTR_MODI: gradient.get("mode_values", []),
             ATTR_LICHT_ID: self.rid,
+            ATTR_FORM: self._form(),
         }
+
+    def _form(self) -> str:
+        """Ungefähre Form der Lampe (für Zeichnungen in Dashboards und der Seite)."""
+        device = self.client.get(self.resource.get("owner", {}).get("rid")) or {}
+        product = str(device.get("product_data", {}).get("product_name", "")).lower()
+        archetype = str(self.resource.get("metadata", {}).get("archetype", "")).lower()
+        if "signe" in product or "signe" in archetype or "floor" in archetype:
+            return "stab"
+        if ("play" in product and "lightstrip" in product) or "lightstrip_tv" in archetype:
+            return "tv"
+        if "tube" in product or "tube" in archetype:
+            return "roehre"
+        return "streifen"

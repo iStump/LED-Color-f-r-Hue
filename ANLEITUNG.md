@@ -1,17 +1,21 @@
-# LED Color für Hue 0.2.2 – Update, Test, GitHub
+# LED Color für Hue 0.3.0 – Update, Test, GitHub
 
-## A. Update (5 Minuten)
+## A. Update über HACS (1 Minute)
 
-1. Im Finder `smb://homeassistant/config` öffnen → `custom_components`.
-2. Den alten Ordner `hue_plus` **ersetzen**: den neuen Ordner `hue_plus` aus dem ZIP hineinziehen →
-   «Ersetzen». (Der Name bleibt `hue_plus`, nur so bleiben deine Sensoren und Karten heil.)
-3. Home Assistant neu starten (Einstellungen → System → ⏻ → *Home Assistant neu starten*).
-4. Fertig – nichts neu einrichten, kein Knopf drücken.
+1. HACS öffnen → «LED Color für Hue» → *Aktualisieren* (oder ⋮ → *Erneut herunterladen*).
+2. Home Assistant neu starten.
+3. Seite einmal neu laden (⌘R bzw. in der App nach unten ziehen). In der Seitenleiste erscheint **LED Color**.
 
-Danach heisst die Integration «LED Color für Hue». Deine Entitäts-IDs (`sensor.hue_plus_…`) bleiben gleich.
-Das neue Logo erscheint unter Geräte & Dienste (evtl. erst nach ⌘R / Cache leeren).
+Ohne HACS: Ordner `custom_components/hue_plus` durch den neuen ersetzen (siehe Terminal-Befehl im Chat).
 
 ## B. Testen
+
+0. **Seite «LED Color»** in der Seitenleiste öffnen:
+   - Verläufe: Signe wählen, einen Farbpunkt antippen, in der Farbscheibe eine Farbe wählen → die Lampe ändert sich.
+     Einen Punkt mit dem Finger nach oben ziehen → Reihenfolge ändert sich.
+   - Szenen: eine Szene antippen → sie geht an und leuchtet in der Liste.
+   - Favoriten: unter Verläufe «Als Favorit» speichern, dann unter Favoriten auf die andere Signe legen.
+   - Einstellungen: Einschaltverhalten einer Lampe umstellen, in der Hue App kontrollieren.
 
 1. **Name:** Geräte & Dienste → die Integration heisst jetzt «LED Color für Hue».
 2. **Erreichbar:** Entwicklerwerkzeuge → Zustände → `verlauf` → Attribut `erreichbar: true`.
