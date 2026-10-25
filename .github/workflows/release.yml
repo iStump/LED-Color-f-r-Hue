@@ -1,0 +1,32 @@
+# Erstellt automatisch ein Release, sobald in manifest.json eine neue Version steht.
+# So sieht HACS jede neue Version sofort – niemand muss von Hand ein Release anlegen.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [custom_components/hue_plus/manifest.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version lesen
+        id: v
+        run: echo "version=$(jq -r .version custom_components/hue_plus/manifest.json)" >> "$GITHUB_OUTPUT"
+      - name: Release anlegen (falls es diese Version noch nicht gibt)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION gibt es schon – nichts zu tun."
+          else
+            gh release create "v$VERSION" --target "$GITHUB_SHA" \
+              --title "LED Color für Hue $VERSION" --generate-notes
+          fi
