@@ -1,6 +1,6 @@
 <p align="center"><img src="custom_components/hue_plus/brand/dark_icon@2x.png" width="140" alt="LED Color für Hue"></p>
 
-# LED Color für Hue 0.5.0
+# LED Color für Hue 0.5.1
 
 **Inoffizielle** Erweiterung für Home Assistant, die die offizielle Philips-Hue-Integration ergänzt.
 Kein Produkt von Signify/Philips. «Philips» und «Hue» sind Marken von Signify.

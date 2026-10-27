@@ -12,7 +12,7 @@
  * (Sensoren sensor.hue_plus_…_verlauf und die Befehle hue_plus/…).
  */
 
-const VERSION = "0.5.0";
+const VERSION = "0.5.1";
 
 const MODES = {
   interpolated_palette: "Fliessend",
@@ -398,8 +398,20 @@ class LedColorPanel extends HTMLElement {
     const first = !this._hass;
     this._hass = hass;
     LANG = String(hass.locale?.language || hass.language || "de").toLowerCase().startsWith("de") ? "de" : "en";
-    if (first) this._init();
-    if (!this._raf) this._raf = requestAnimationFrame(() => { this._raf = null; this._update(); });
+    // Ein Fehler hier darf nie das Dashboard (den ganzen Abschnitt) mitreissen:
+    // dann nur eine kleine Meldung in dieser Karte.
+    if (first) { try { this._init(); } catch (e) { this._fail(e); return; } }
+    if (this._failed) return;
+    if (!this._raf) this._raf = requestAnimationFrame(() => {
+      this._raf = null;
+      try { this._update(); } catch (e) { console.error("LED Color:", e); }
+    });
+  }
+  _fail(e) {
+    this._failed = true;
+    console.error("LED Color:", e);
+    this.shadowRoot.innerHTML = `<div style="padding:16px;border-radius:12px;background:rgba(255,80,80,.12);color:inherit;font:14px system-ui">
+      LED Color: ${esc(e?.message || e)}</div>`;
   }
   get hass() { return this._hass; }
   set narrow(v) { this._narrow = v; if (this._menu) { this._menu.narrow = v; this._menu.style.display = v ? "" : "none"; } }
@@ -459,8 +471,8 @@ class LedColorPanel extends HTMLElement {
       <div class="sheet-back"></div><div class="sheet" role="dialog" aria-modal="true"></div>
       <div class="toast" role="status"></div>`;
 
-    // Menü-Knopf von Home Assistant (öffnet die Seitenleiste auf dem Handy)
-    if (customElements.get("ha-menu-button")) {
+    // Menü-Knopf von Home Assistant (öffnet die Seitenleiste auf dem Handy) – nur auf der eigenen Seite
+    if (!cfg && customElements.get("ha-menu-button") && r.querySelector(".menu")) {
       this._menu = document.createElement("ha-menu-button");
       this._menu.hass = this._hass;
       this._menu.narrow = this._narrow;
@@ -1401,7 +1413,8 @@ class LedColorCard extends LedColorPanel {
     this._cfg = { ...(config || {}) };
     if (this._hass) { // Änderung im Karten-Editor: neu aufbauen
       this._shapeSig = this._chipSig = null; this._draft = null; this._hist = [];
-      this._init();
+      this._failed = false;
+      try { this._init(); } catch (e) { this._fail(e); }
     }
   }
   getCardSize() { return this._cfg?.ansicht === "szenen" ? 4 : 9; }
@@ -1409,10 +1422,23 @@ class LedColorCard extends LedColorPanel {
   static getStubConfig() { return { ansicht: "verlauf" }; }
 }
 
-if (!customElements.get("led-color-panel")) customElements.define("led-color-panel", LedColorPanel);
-if (!customElements.get("led-color-card")) {
-  customElements.define("led-color-card", LedColorCard);
+// Anmelden. Home Assistant ersetzt beim Start sein Verzeichnis der Elemente; wurde die Datei
+// davor geladen, wären die Karte und die Seite danach «unbekannt». Darum prüfen wir eine Weile
+// nach und melden sie, falls nötig, nochmals an (jeweils als eigene Unterklasse).
+const register = () => {
+  try {
+    if (!customElements.get("led-color-panel")) customElements.define("led-color-panel", class extends LedColorPanel {});
+    if (!customElements.get("led-color-card")) customElements.define("led-color-card", class extends LedColorCard {});
+  } catch (e) { console.warn("LED Color: Anmelden", e); }
   window.customCards = window.customCards || [];
-  window.customCards.push({ type: "led-color-card", name: "LED Color", description: "Farbverläufe, Szenen und Favoriten für Hue (LED Color für Hue)", preview: false });
+  if (!window.customCards.some((c) => c.type === "led-color-card")) {
+    window.customCards.push({ type: "led-color-card", name: "LED Color", description: "Farbverläufe, Szenen und Favoriten für Hue (LED Color für Hue)", preview: false });
+  }
+};
+register();
+window.addEventListener("load", register);
+{
+  let n = 0;
+  const t = setInterval(() => { register(); if (++n >= 60) clearInterval(t); }, 250); // 15 Sekunden lang
 }
 console.info(`%c LED Color für Hue %c ${VERSION} `, "background:#e9c48a;color:#000;border-radius:4px 0 0 4px;padding:2px 4px", "background:#222;color:#e9c48a;border-radius:0 4px 4px 0;padding:2px 4px");
