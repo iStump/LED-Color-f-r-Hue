@@ -12,7 +12,7 @@
  * (Sensoren sensor.hue_plus_…_verlauf und die Befehle hue_plus/…).
  */
 
-const VERSION = "0.5.1";
+const VERSION = "0.5.2";
 
 const MODES = {
   interpolated_palette: "Fliessend",
@@ -1439,6 +1439,7 @@ register();
 window.addEventListener("load", register);
 {
   let n = 0;
-  const t = setInterval(() => { register(); if (++n >= 60) clearInterval(t); }, 250); // 15 Sekunden lang
+  // erst schnell, dann gemütlich: 15 s lang alle 0.25 s, danach bis 5 Min. alle 2 s
+  const t = setInterval(() => { register(); if (++n >= 60) { clearInterval(t); const t2 = setInterval(register, 2000); setTimeout(() => clearInterval(t2), 285000); } }, 250);
 }
 console.info(`%c LED Color für Hue %c ${VERSION} `, "background:#e9c48a;color:#000;border-radius:4px 0 0 4px;padding:2px 4px", "background:#222;color:#e9c48a;border-radius:0 4px 4px 0;padding:2px 4px");

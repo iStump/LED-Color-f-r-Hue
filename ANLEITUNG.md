@@ -67,7 +67,9 @@ raum: Wohnzimmer
 | `raum` | nur die Szenen dieses Raums |
 | `titel` | Überschrift der Karte |
 
-Die Karte muss nicht als Ressource eingetragen werden – LED Color für Hue lädt sie selbst.
+Die Karte muss nicht von Hand eingetragen werden: LED Color für Hue trägt sie selbst unter
+*Dashboards → Ressourcen* ein (Eintrag `/hue_plus_static/led-color-panel.js?…&karte=1` – bitte stehen lassen).
+Beim Löschen von LED Color verschwindet der Eintrag wieder.
 
 ## Sensoren für eigene Dashboards
 

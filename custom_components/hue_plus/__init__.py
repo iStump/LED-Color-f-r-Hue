@@ -23,7 +23,7 @@ from homeassistant.loader import async_get_integration
 
 from .api import HueAuthError, HueClient, HueError
 from .const import CONF_APP_KEY, DOMAIN
-from .panel import async_register_panel, async_unregister_panel
+from .panel import async_register_panel, async_remove_resource, async_unregister_panel
 from .services import async_setup_services
 from .websocket import async_setup_websocket
 
@@ -115,3 +115,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: HuePlusConfigEntry) -> 
     if unloaded and not others:
         async_unregister_panel(hass)
     return unloaded
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: HuePlusConfigEntry) -> None:
+    """LED Color wird gelöscht: den Eintrag unter Dashboards → Ressourcen mitnehmen."""
+    if not [e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id]:
+        await async_remove_resource(hass)
